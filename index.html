@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOTVS RM - Central de Notas</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para icones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        discord: {
+                            dark: '#36393f',       // Fundo principal
+                            sidebar: '#202225',    // Fundo da barra lateral/header
+                            channel: '#2f3136',    // Fundo dos cards
+                            hover: '#34373c',      // Efeito hover
+                            blurple: '#5865f2',    // Cor de destaque (Discord blurple)
+                            green: '#43b581',      // Verde (Sucesso/Aprovado)
+                            yellow: '#faa61a',     // Amarelo (Atencao)
+                            red: '#f04747',        // Vermelho (Perigo/Faltas/Critico)
+                            textPrimary: '#ffffff',
+                            textSecondary: '#b9bbbe'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar similar ao Discord */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2e3136;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #202225;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #111214;
+        }
+    </style>
+</head>
+<body class="bg-discord-dark text-discord-textPrimary min-h-screen flex flex-col font-sans">
+
+    <!-- Loading Screen Overlay -->
+    <div id="loader" class="fixed inset-0 bg-discord-sidebar flex flex-col items-center justify-center z-50 transition-all duration-300">
+        <div class="relative flex items-center justify-center mb-6">
+            <!-- Circulo animado -->
+            <div class="w-20 h-20 border-4 border-discord-blurple border-t-transparent rounded-full animate-spin"></div>
+            <i class="fa-solid fa-graduation-cap text-3xl text-discord-blurple absolute"></i>
+        </div>
+        <h2 class="text-xl font-bold text-discord-textPrimary mb-2">Conectando ao TOTVS RM...</h2>
+        <p class="text-sm text-discord-textSecondary animate-pulse">Autenticando sessão e buscando notas acadêmicas...</p>
+    </div>
+
+    <!-- Header / Navbar -->
+    <header class="bg-discord-sidebar p-4 shadow-md sticky top-0 z-30 border-b border-black/20 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-discord-blurple/20 p-2.5 rounded-xl text-discord-blurple">
+                <i class="fa-solid fa-graduation-cap text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold leading-tight flex items-center gap-2">
+                    RM Portal <span class="text-xs bg-discord-blurple text-discord-textPrimary px-2 py-0.5 rounded-full font-medium">Edu</span>
+                </h1>
+                <p id="student-name" class="text-xs text-discord-textSecondary">Carregando dados do aluno...</p>
+            </div>
+        </div>
+
+        <!-- Filtros e Controles -->
+        <div class="flex items-center gap-3 w-full md:w-auto">
+            <div class="relative w-full md:w-64">
+                <label for="periodo-select" class="absolute -top-2 left-3 px-1 text-[10px] font-bold text-discord-blurple uppercase bg-discord-sidebar">Semestre</label>
+                <select id="periodo-select" onchange="changePeriod()" class="w-full bg-discord-dark border border-black/30 text-discord-textPrimary rounded-lg py-2 px-3 focus:outline-none focus:border-discord-blurple transition text-sm cursor-pointer appearance-none">
+                    <!-- Preenchido via JS -->
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-discord-textSecondary">
+                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                </div>
+            </div>
+            
+            <button onclick="reloadData()" class="bg-discord-blurple hover:bg-discord-blurple/80 text-white rounded-lg p-2.5 transition flex items-center justify-center gap-2 text-sm font-semibold" title="Recarregar dados">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
+        
+        <!-- Alerta de Erro -->
+        <div id="error-banner" class="hidden bg-discord-red/20 border border-discord-red/40 text-discord-textPrimary rounded-xl p-4 flex items-start gap-3">
+            <i class="fa-solid fa-circle-exclamation text-discord-red text-xl mt-0.5"></i>
+            <div class="flex-1">
+                <h3 class="font-bold text-sm">Erro de Conexão</h3>
+                <p id="error-msg" class="text-xs text-discord-textSecondary mt-0.5">Não foi possível carregar as informações do TOTVS RM.</p>
+            </div>
+            <button onclick="reloadData()" class="text-discord-textSecondary hover:text-white text-xs underline font-semibold">Tentar Novamente</button>
+        </div>
+
+        <!-- Informações Rápidas / Estatísticas -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card Aluno -->
+            <div class="bg-discord-channel p-4 rounded-xl border border-black/10 flex items-center gap-4">
+                <div class="bg-discord-blurple/10 p-3 rounded-lg text-discord-blurple text-xl flex items-center justify-center w-12 h-12">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-discord-textSecondary uppercase tracking-wider">Matrícula (RA)</p>
+                    <p id="stat-ra" class="text-sm font-bold text-discord-textPrimary">---</p>
+                </div>
+            </div>
+            <!-- Card Curso -->
+            <div class="bg-discord-channel p-4 rounded-xl border border-black/10 flex items-center gap-4">
+                <div class="bg-teal-500/10 p-3 rounded-lg text-teal-400 text-xl flex items-center justify-center w-12 h-12">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-[10px] font-bold text-discord-textSecondary uppercase tracking-wider">Curso</p>
+                    <p id="stat-curso" class="text-sm font-bold text-discord-textPrimary truncate">---</p>
+                </div>
+            </div>
+            <!-- Card Situação Média -->
+            <div class="bg-discord-channel p-4 rounded-xl border border-black/10 flex items-center gap-4">
+                <div id="stat-media-icon" class="bg-discord-green/10 p-3 rounded-lg text-discord-green text-xl flex items-center justify-center w-12 h-12">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-discord-textSecondary uppercase tracking-wider">Matérias Aprovadas</p>
+                    <p id="stat-aprovadas" class="text-sm font-bold text-discord-textPrimary">0 / 0</p>
+                </div>
+            </div>
+            <!-- Card Preocupação Geral -->
+            <div class="bg-discord-channel p-4 rounded-xl border border-black/10 flex items-center gap-4">
+                <div id="stat-concern-icon" class="bg-discord-green/10 p-3 rounded-lg text-discord-green text-xl flex items-center justify-center w-12 h-12">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-discord-textSecondary uppercase tracking-wider">Índice de Risco</p>
+                    <p id="stat-concern-text" class="text-sm font-bold text-discord-green">Tranquilo</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grade Acadêmica -->
+        <div>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-sm font-bold text-discord-textSecondary uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-table-list text-discord-blurple"></i> Desempenho por Disciplina
+                </h2>
+                <span id="period-badge" class="text-xs bg-discord-channel text-discord-textSecondary border border-black/20 px-3 py-1 rounded-full font-medium">---</span>
+            </div>
+
+            <!-- Card Grid (Substitui tabela por layout premium responsivo) -->
+            <div id="grades-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Cards renderizados dinamicamente via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-discord-sidebar p-4 mt-auto border-t border-black/20 text-center text-xs text-discord-textSecondary">
+        <p>TOTVS RM Notas & Faltas Autopilot &copy; 2026</p>
+    </footer>
+
+    <!-- JS Logic -->
+    <script>
+        // Carrega inicializacao
+        document.addEventListener("DOMContentLoaded", () => {
+            loadContexts();
+        });
+
+        let alunoData = null;
+
+        async function loadContexts() {
+            showLoader(true);
+            hideError();
+            try {
+                const response = await fetch('/api/contextos');
+                if (!response.ok) throw new Error("Erro ao consultar contextos.");
+                
+                const data = await response.json();
+                alunoData = data;
+                
+                // Configura Info Aluno
+                document.getElementById("student-name").textContent = `${data.aluno.NOMEALUNO || 'Aluno'} | RA: ${data.aluno.RA || '---'}`;
+                document.getElementById("stat-ra").textContent = data.aluno.RA || '---';
+                document.getElementById("stat-curso").textContent = data.aluno.NOMECURSO || '---';
+                
+                // Popula select de periodos
+                const select = document.getElementById("periodo-select");
+                select.innerHTML = "";
+                
+                // Ordena contextos de forma decrescente para o mais recente ficar no topo
+                const sortedContexts = [...data.contextos].sort((a, b) => b.CODPERLET.localeCompare(a.CODPERLET));
+                
+                sortedContexts.forEach(ctx => {
+                    const option = document.createElement("option");
+                    option.value = ctx.CODPERLET;
+                    option.textContent = `${ctx.CODPERLET} - ${ctx.SITMATPERLET}`;
+                    select.appendChild(option);
+                });
+
+                // Seleciona o periodo default com base na regra de datas
+                const defaultP = data.default_periodo;
+                const hasDefault = sortedContexts.some(c => c.CODPERLET === defaultP);
+                
+                if (hasDefault) {
+                    select.value = defaultP;
+                } else if (sortedContexts.length > 0) {
+                    select.value = sortedContexts[0].CODPERLET; // fallback para o mais recente
+                }
+                
+                // Busca notas do periodo selecionado
+                await fetchGrades(select.value);
+
+            } catch (err) {
+                console.error(err);
+                showError("Não foi possível estabelecer contato com as APIs do TOTVS RM.");
+                showLoader(false);
+            }
+        }
+
+        async function fetchGrades(periodo) {
+            showLoader(true);
+            hideError();
+            
+            document.getElementById("period-badge").textContent = `Semestre Letivo: ${periodo}`;
+            
+            try {
+                const response = await fetch(`/api/grades?periodo=${periodo}`);
+                if (!response.ok) throw new Error("Erro ao buscar notas.");
+                
+                const data = await response.json();
+                renderGrades(data.grades);
+                showLoader(false);
+            } catch (err) {
+                console.error(err);
+                showError("Erro ao baixar notas e faltas para o semestre selecionado.");
+                showLoader(false);
+            }
+        }
+
+        function changePeriod() {
+            const val = document.getElementById("periodo-select").value;
+            fetchGrades(val);
+        }
+
+        function reloadData() {
+            const val = document.getElementById("periodo-select").value;
+            if (val) {
+                fetchGrades(val);
+            } else {
+                loadContexts();
+            }
+        }
+
+        function renderGrades(grades) {
+            const container = document.getElementById("grades-grid");
+            container.innerHTML = "";
+            
+            if (!grades || grades.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-discord-channel p-8 rounded-xl border border-black/10 text-center">
+                        <i class="fa-solid fa-folder-open text-discord-textSecondary text-4xl mb-3"></i>
+                        <p class="text-base font-semibold text-discord-textSecondary">Nenhuma disciplina cadastrada neste semestre.</p>
+                    </div>
+                `;
+                updateStats(0, 0, "Sem dados");
+                return;
+            }
+
+            // Ordena as disciplinas por prioridade de risco/preocupacao (Maior risco no topo)
+            const getPriorityScore = (g) => {
+                const n1 = parseFloat(g.nota1?.replace(',', '.')) || 0;
+                const n2 = parseFloat(g.nota2?.replace(',', '.')) || 0;
+                const n3 = parseFloat(g.nota3?.replace(',', '.')) || 0;
+                const soma = n1 + n2 + n3;
+                const totalFaltas = parseInt(g.faltas) || 0;
+                
+                const faltaPoints = Math.max(0, 18 - soma);
+                const reprovadoFalta = totalFaltas > 20;
+                const riscoFalta = totalFaltas >= 16;
+                const aprovado = soma >= 18;
+                
+                let score = 0;
+                if (reprovadoFalta) {
+                    score += 10000;
+                } else if (riscoFalta) {
+                    score += 5000;
+                }
+                
+                if (!aprovado) {
+                    score += faltaPoints * 100; // Quanto mais pontos faltam, maior a urgencia
+                }
+                return score;
+            };
+
+            // Ordena decrescente (maior score primeiro)
+            grades.sort((a, b) => getPriorityScore(b) - getPriorityScore(a));
+
+            let aprovadasCount = 0;
+            let totalMaterias = grades.length;
+            let maxConcernLevel = 0; // 0 = Tranquilo, 1 = Atencao, 2 = Preocupante, 3 = Critico
+
+            grades.forEach(g => {
+                const n1 = parseFloat(g.nota1?.replace(',', '.')) || 0;
+                const n2 = parseFloat(g.nota2?.replace(',', '.')) || 0;
+                const n3 = parseFloat(g.nota3?.replace(',', '.')) || 0;
+                const somaTotal = n1 + n2 + n3;
+                
+                const hasGrades = g.nota1 !== null || g.nota2 !== null || g.nota3 !== null;
+                const totalFaltas = parseInt(g.faltas) || 0;
+                const percFaltas = parseFloat(g.faltas_percentual) || 0.0;
+                
+                // Cada dia de aula tem 4 presenças (horas). O limite de faltas é de 20 presenças (equivalente a 5 dias completos).
+                const limiteFaltas = 20;
+                const faltasRestantes = limiteFaltas - totalFaltas;
+                const diasFaltados = totalFaltas / 4;
+                const diasRestantes = faltasRestantes / 4;
+                const percLimiteFaltas = (totalFaltas / limiteFaltas) * 100;
+                
+                let aprovado = somaTotal >= 18;
+                let reprovadoPorFalta = totalFaltas > limiteFaltas;
+                
+                if (aprovado && !reprovadoPorFalta) aprovadasCount++;
+
+                // Lógica de cálculo dos pontos necessários para passar (Média 6 totalizando 18 pontos)
+                let faltaText = "-";
+                let concernText = "Pendente";
+                let concernBadgeColor = "bg-zinc-700 text-zinc-300 border border-zinc-600";
+                let localConcernLevel = 0;
+                
+                if (hasGrades) {
+                    if (aprovado) {
+                        faltaText = "Aprovado!";
+                        concernText = "Tranquilo";
+                        concernBadgeColor = "bg-discord-green/10 text-discord-green border border-discord-green/20";
+                    } else {
+                        const falta = 18 - somaTotal;
+                        faltaText = falta.toFixed(1).replace('.', ',') + " pts";
+                        
+                        // Concern meter baseado no quanto falta
+                        if (falta <= 3) {
+                            concernText = "Atenção";
+                            concernBadgeColor = "bg-yellow-400/10 text-yellow-400 border border-yellow-400/20";
+                            localConcernLevel = 1;
+                            maxConcernLevel = Math.max(maxConcernLevel, 1);
+                        } else if (falta <= 6) {
+                            concernText = "Preocupante";
+                            concernBadgeColor = "bg-orange-500/10 text-orange-500 border border-orange-500/20";
+                            localConcernLevel = 2;
+                            maxConcernLevel = Math.max(maxConcernLevel, 2);
+                        } else {
+                            concernText = "Crítico";
+                            concernBadgeColor = "bg-discord-red/10 text-discord-red border border-discord-red/20";
+                            localConcernLevel = 3;
+                            maxConcernLevel = Math.max(maxConcernLevel, 3);
+                        }
+                    }
+                }
+
+                // Sobrescreve o status e concern level se o aluno estiver estourando faltas ou perto de estourar
+                if (reprovadoPorFalta) {
+                    concernText = "RF (Rep. Falta)";
+                    concernBadgeColor = "bg-discord-red/20 text-discord-red border border-discord-red/40 animate-pulse font-bold";
+                    localConcernLevel = 3;
+                    maxConcernLevel = 3;
+                } else if (totalFaltas >= 16) {
+                    concernText = "Limite Faltas";
+                    concernBadgeColor = "bg-orange-500/20 text-orange-500 border border-orange-500/30 font-semibold";
+                    localConcernLevel = 2;
+                    maxConcernLevel = Math.max(maxConcernLevel, 2);
+                }
+
+                // Renderiza Card
+                const card = document.createElement("div");
+                card.className = "bg-discord-channel rounded-xl border border-black/10 hover:border-discord-blurple/30 p-6 flex flex-col justify-between transition-all hover:bg-discord-hover/50 duration-200 shadow-sm relative overflow-hidden group";
+                
+                // Efeito de borda colorida se aprovado ou critico
+                let indicatorColor = "bg-zinc-600";
+                if (hasGrades) {
+                    if (reprovadoPorFalta) {
+                        indicatorColor = "bg-discord-red animate-pulse";
+                    } else if (aprovado) {
+                        indicatorColor = "bg-discord-green";
+                    } else if (localConcernLevel === 3) {
+                        indicatorColor = "bg-discord-red";
+                    } else if (localConcernLevel === 2) {
+                        indicatorColor = "bg-orange-500";
+                    } else {
+                        indicatorColor = "bg-yellow-400";
+                    }
+                }
+
+                card.innerHTML = `
+                    <!-- Linha lateral indicadora -->
+                    <div class="absolute left-0 top-0 bottom-0 w-1.5 ${indicatorColor}"></div>
+                    
+                    <div class="pl-2">
+                        <!-- Topo Card -->
+                        <div class="flex items-start justify-between gap-3 mb-4">
+                            <div class="overflow-hidden flex items-center gap-2">
+                                <h3 class="font-bold text-discord-textPrimary text-base md:text-lg group-hover:text-discord-blurple transition duration-150 truncate" title="${g.DISCIPLINA}">
+                                    ${g.DISCIPLINA}
+                                </h3>
+                                <i class="fa-solid fa-circle-info text-discord-textSecondary text-sm cursor-help hover:text-discord-textPrimary shrink-0" title="Código: ${g.CODDISC}&#10;Turma: ${g.CODTURMA}"></i>
+                            </div>
+                            
+                            <span class="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${concernBadgeColor} shrink-0">
+                                ${concernText}
+                            </span>
+                        </div>
+
+                        <!-- Grid de Notas -->
+                        <div class="grid grid-cols-4 gap-2 text-center my-4 py-2.5 border-y border-black/15 bg-black/10 rounded-lg">
+                            <div>
+                                <p class="text-xs text-discord-textSecondary font-bold uppercase tracking-wider">Nota 1</p>
+                                <p class="text-base font-bold text-discord-textPrimary mt-1">${g.nota1 || '-'}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-discord-textSecondary font-bold uppercase tracking-wider">Nota 2</p>
+                                <p class="text-base font-bold text-discord-textPrimary mt-1">${g.nota2 || '-'}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-discord-textSecondary font-bold uppercase tracking-wider">Nota 3</p>
+                                <p class="text-base font-bold text-discord-textPrimary mt-1">${g.nota3 || '-'}</p>
+                            </div>
+                            <div class="border-l border-black/20">
+                                <p class="text-xs text-discord-blurple font-bold uppercase tracking-wider">Soma</p>
+                                <p class="text-base font-black mt-1 ${aprovado && !reprovadoPorFalta ? 'text-discord-green' : 'text-discord-textPrimary'}">${hasGrades ? somaTotal.toFixed(1).replace('.', ',') : '-'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Faltas e Pontos Faltantes -->
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-3">
+                            <!-- Barra de Faltas -->
+                            <div class="flex-1">
+                                <div class="flex justify-between text-xs text-discord-textSecondary font-semibold mb-1">
+                                    <span>Faltas: <strong class="text-discord-textPrimary">${totalFaltas} / 20</strong> <span class="text-[10px] text-discord-textSecondary/70">(${diasFaltados.toFixed(1).replace('.0', '')} dias completos)</span></span>
+                                    <span class="${reprovadoPorFalta ? 'text-discord-red font-bold animate-pulse' : totalFaltas >= 16 ? 'text-orange-500 font-bold' : ''}">Restam ${faltasRestantes >= 0 ? faltasRestantes : 0} (${diasRestantes >= 0 ? diasRestantes.toFixed(1).replace('.0', '') : 0} dias)</span>
+                                </div>
+                                <div class="w-full bg-black/20 rounded-full h-2 overflow-hidden">
+                                    <div class="h-full rounded-full ${reprovadoPorFalta ? 'bg-discord-red' : totalFaltas >= 16 ? 'bg-orange-500' : 'bg-discord-green'}" style="width: ${Math.min(percLimiteFaltas, 100)}%"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Falta para passar -->
+                            <div class="bg-black/15 p-2 rounded-lg border border-black/5 flex items-center justify-between sm:justify-end gap-3 px-4 sm:w-44 shrink-0">
+                                <span class="text-[10px] text-discord-textSecondary font-bold uppercase shrink-0">Precisa:</span>
+                                <span class="text-sm font-bold ${reprovadoPorFalta ? 'text-discord-red' : aprovado ? 'text-discord-green' : localConcernLevel === 2 ? 'text-orange-500' : localConcernLevel === 3 ? 'text-discord-red' : 'text-yellow-400'}">${reprovadoPorFalta ? 'Reprovado' : faltaText}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+
+            // Atualiza barra de status geral
+            let riskText = "Tranquilo";
+            if (maxConcernLevel === 3) riskText = "Crítico";
+            else if (maxConcernLevel === 2) riskText = "Preocupante";
+            else if (maxConcernLevel === 1) riskText = "Atenção";
+            
+            updateStats(aprovadasCount, totalMaterias, riskText);
+        }
+
+        function updateStats(aprovadas, total, risk) {
+            document.getElementById("stat-aprovadas").textContent = `${aprovadas} / ${total}`;
+            
+            const riskLabel = document.getElementById("stat-concern-text");
+            riskLabel.textContent = risk;
+            
+            const cardIcon = document.getElementById("stat-concern-icon");
+            if (risk === "Crítico") {
+                riskLabel.className = "text-sm font-bold text-discord-red";
+                cardIcon.className = "bg-discord-red/10 p-3 rounded-lg text-discord-red text-xl flex items-center justify-center w-12 h-12 animate-pulse";
+            } else if (risk === "Preocupante") {
+                riskLabel.className = "text-sm font-bold text-orange-500";
+                cardIcon.className = "bg-orange-500/10 p-3 rounded-lg text-orange-500 text-xl flex items-center justify-center w-12 h-12";
+            } else if (risk === "Atenção") {
+                riskLabel.className = "text-sm font-bold text-yellow-400";
+                cardIcon.className = "bg-yellow-400/10 p-3 rounded-lg text-yellow-400 text-xl flex items-center justify-center w-12 h-12";
+            } else {
+                riskLabel.className = "text-sm font-bold text-discord-green";
+                cardIcon.className = "bg-discord-green/10 p-3 rounded-lg text-discord-green text-xl flex items-center justify-center w-12 h-12";
+            }
+        }
+
+        function showLoader(show) {
+            const loader = document.getElementById("loader");
+            if (show) {
+                loader.classList.remove("opacity-0", "pointer-events-none");
+            } else {
+                loader.classList.add("opacity-0", "pointer-events-none");
+            }
+        }
+
+        function showError(msg) {
+            const banner = document.getElementById("error-banner");
+            document.getElementById("error-msg").textContent = msg;
+            banner.classList.remove("hidden");
+        }
+
+        function hideError() {
+            document.getElementById("error-banner").classList.add("hidden");
+        }
+    </script>
+</body>
+</html>
