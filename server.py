@@ -1,10 +1,29 @@
 import os
+import re
 import json
+import time
 import urllib.parse
 import base64
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import datetime
 import requests
+
+# Cache em memoria por periodo, para nao refazer login a cada troca de semestre
+CACHE_TTL_SEGUNDOS = 300
+_cache = {}
+
+def parse_nota(valor):
+    """
+    Converte a nota do TOTVS em float.
+    O portal embrulha notas abaixo da media em HTML (ex: '<font color=red>3,3</font>').
+    """
+    if valor is None:
+        return None
+    texto = re.sub(r"<[^>]+>", "", str(valor)).strip().replace(",", ".")
+    try:
+        return float(texto)
+    except ValueError:
+        return None
 
 def load_env(filepath=".env"):
     """Loads environment variables from a .env file."""
@@ -155,12 +174,12 @@ def fetch_totvs_data(periodo_alvo):
             "DISCIPLINA": nota.get("DISCIPLINA"),
             "SITUACAO": nota.get("SITUACAO"),
             "IDTURMADISC": id_turma_disc,
-            "nota1": nota.get("1 - Nota 1"),
-            "nota2": nota.get("2 - Nota 2"),
-            "nota3": nota.get("3 - Nota 3"),
-            "media_parcial": nota.get("5 - M\u00e9dia Parcial") or nota.get("5 - M\u00e9dia Parcial"),
-            "media_final": nota.get("6 - M\u00e9dia Final") or nota.get("4 - M\u00e9dia Final"),
-            "faltas": falta_info.get("1 - Faltas Sala de Aula", "0"),
+            "nota1": parse_nota(nota.get("1 - Nota 1")),
+            "nota2": parse_nota(nota.get("2 - Nota 2")),
+            "nota3": parse_nota(nota.get("3 - Nota 3")),
+            "media_parcial": parse_nota(nota.get("5 - M\u00e9dia Parcial")),
+            "media_final": parse_nota(nota.get("6 - M\u00e9dia Final") or nota.get("4 - M\u00e9dia Final")),
+            "faltas": int(parse_nota(falta_info.get("1 - Faltas Sala de Aula")) or 0),
             "faltas_percentual": falta_info.get("PERCENTUAL", 0.0),
             "situacao_faltas": falta_info.get("SITUACAOFALTAS")
         })
@@ -178,9 +197,22 @@ def fetch_totvs_data(periodo_alvo):
     return {
         "aluno": aluno_info,
         "periodo_atual": periodo_alvo,
+        "default_periodo": get_default_period(),
         "contextos": contextos_formatados,
-        "grades": grades_and_absences
+        "grades": grades_and_absences,
+        "atualizado_em": datetime.now().isoformat(timespec="seconds")
     }
+
+def fetch_totvs_data_cached(periodo_alvo, fresh=False):
+    """Retorna os dados do periodo do cache se ainda validos, senao consulta o TOTVS."""
+    hit = _cache.get(periodo_alvo)
+    if hit and not fresh and time.time() - hit[0] < CACHE_TTL_SEGUNDOS:
+        return hit[1]
+    data = fetch_totvs_data(periodo_alvo)
+    _cache[periodo_alvo] = (time.time(), data)
+    # O TOTVS pode cair em fallback para outro periodo; guarda tambem pelo periodo real
+    _cache[data["periodo_atual"]] = (time.time(), data)
+    return data
 
 class PortalHTTPHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -192,7 +224,7 @@ class PortalHTTPHandler(BaseHTTPRequestHandler):
             try:
                 # Fazemos uma conexao rapida ao TOTVS para carregar os contextos disponiveis
                 default_p = get_default_period()
-                data = fetch_totvs_data(default_p)
+                data = fetch_totvs_data_cached(default_p)
                 
                 response_data = {
                     "aluno": data["aluno"],
@@ -213,9 +245,10 @@ class PortalHTTPHandler(BaseHTTPRequestHandler):
             periodo = query_params.get("periodo", [None])[0]
             if not periodo:
                 periodo = get_default_period()
-            
+            fresh = query_params.get("fresh", ["0"])[0] == "1"
+
             try:
-                data = fetch_totvs_data(periodo)
+                data = fetch_totvs_data_cached(periodo, fresh)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()

@@ -1,6 +1,6 @@
 # TOTVS RM Portal - Automatização de Notas & Faltas
 
-Este projeto automatiza o fluxo de autenticação e consulta de notas/faltas do portal acadêmico TOTVS RM e disponibiliza uma interface web bonita (inspirada no tema escuro do Discord) para visualização.
+Este projeto automatiza o fluxo de autenticação e consulta de notas/faltas do portal acadêmico TOTVS RM e disponibiliza uma interface web em forma de boletim (caderno quadriculado no tema claro, lousa no tema escuro) para visualização.
 
 ## Estrutura do Projeto
 
@@ -36,14 +36,32 @@ O servidor segue estritamente a regra:
 
 Você também pode alternar entre outros semestres passados (como `202523`) a qualquer momento usando a caixa de seleção na parte superior direita da tela.
 
-### 2. Medidor de Preocupação (Concern Meter)
-O card de cada disciplina exibe um indicador visual rápido sobre a sua situação acadêmica:
-*   **Tranquilo (Verde):** Média somada das notas >= 18 (já aprovado por média 6,0).
-*   **Atenção (Amarelo):** Precisa de até 3,0 pontos para atingir a média 18.
-*   **Preocupante (Laranja):** Precisa de 3,1 a 6,0 pontos para passar.
-*   **Crítico (Vermelho):** Precisa de mais de 6,0 pontos para passar.
-*   **Limite Faltas (Laranja/Orange):** Caso atinja de 16 a 20 presenças de falta (faltando apenas 1 dia para reprovar).
-*   **RF / Reprovado (Vermelho Piscante):** Ultrapassou o limite máximo de 20 presenças de falta (mais de 5 dias completos perdidos).
+### 2. Situação de cada matéria (marca-texto)
+A situação é calculada pela **média que você ainda precisa nas provas que faltam**, e não pelo total de pontos que faltam. Assim, 9,8 na N1 com duas provas pela frente (precisa de média 4,1) aparece como tranquila, e não como crítica.
 
-### 3. Ordenação por Risco
-As disciplinas são ordenadas de forma inteligente na tela: as matérias com maior risco de reprovação por falta ou por nota são posicionadas automaticamente no topo para visualização imediata.
+| Situação | Quando |
+|---|---|
+| Garantida / Aprovada | Soma >= 18 (média 6), ou o portal já marcou como aprovada |
+| Tranquila | Precisa de média até 5,0 no que falta |
+| Atenção | Precisa de 5,1 a 7,0 |
+| Apertada | Precisa de 7,1 a 8,5 |
+| Crítica | Precisa de 8,6 a 10,0 |
+| Fora de alcance | Nem com 10 fecha média 6 |
+| Limite de faltas | 16 a 20 faltas (resta 1 dia) |
+| Reprovada por falta | Mais de 20 faltas (5 dias de 4 aulas) |
+| Sem notas ainda | Nenhuma nota lançada |
+
+### 3. Notas a lápis
+Cada nota ainda não lançada aparece escrita "a lápis" com o mínimo que você precisa tirar nela.
+
+### 4. Simulador "E se eu tirar…"
+Clique numa matéria para abrir o simulador: arraste as notas que faltam e veja na hora se a soma fecha 18.
+
+### 5. Faltas em tracinhos
+As faltas aparecem como 5 grupos de 4 tracinhos (um grupo por dia de aula). Cada dia inteiro perdido é riscado.
+
+### 6. Ordenação por risco
+As matérias mais urgentes ficam no topo, e o resumo diz em uma frase onde está o foco do semestre.
+
+### 7. Cache e tema
+O servidor guarda cada semestre em cache por 5 minutos, então trocar de semestre e voltar é instantâneo. O botão **Atualizar** ignora o cache. O tema segue o sistema (caderno no claro, lousa no escuro) e pode ser trocado no botão da lua.
