@@ -2,6 +2,8 @@
 
 Este projeto automatiza o fluxo de autenticação e consulta de notas/faltas do portal acadêmico TOTVS RM e disponibiliza uma interface web em forma de boletim (caderno quadriculado no tema claro, lousa no tema escuro) para visualização.
 
+> **Novo: app de celular.** A pasta [`mobile/`](mobile/README.md) traz a versão Flutter (Android/iOS) com login salvo no cofre do aparelho, histórico offline de todos os semestres e uma aba de análise de desempenho. Ela fala direto com o portal e não precisa do `server.py`.
+
 ## Estrutura do Projeto
 
 *   `index.html`: A interface gráfica de usuário (frontend) com visualização moderna, Tooltips e ordenação automática por prioridade de risco.
@@ -9,6 +11,7 @@ Este projeto automatiza o fluxo de autenticação e consulta de notas/faltas do 
 *   `.env`: Arquivo local contendo as credenciais de acesso (`USUARIO` e `SENHA`).
 *   `.env.example`: Modelo de exemplo para preenchimento de credenciais.
 *   `requirements.txt`: Lista de dependências Python do projeto.
+*   `mobile/`: App Flutter para Android e iOS (veja o [README do app](mobile/README.md)).
 *   `run.bat`: Arquivo executável para iniciar o servidor Python no Windows com apenas dois cliques.
 
 ## Requisitos
