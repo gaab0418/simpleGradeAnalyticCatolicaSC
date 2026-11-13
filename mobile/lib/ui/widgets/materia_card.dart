@@ -3,15 +3,12 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../domain/regras.dart';
-import 'caderno_widgets.dart';
+import 'componentes.dart';
 
 /// Uma materia no boletim. Tocar abre o simulador "E se eu tirar...".
 class MateriaCard extends StatefulWidget {
-  const MateriaCard(this.analise, {super.key, this.ordem = 0});
+  const MateriaCard(this.analise, {super.key});
   final Analise analise;
-
-  /// Posicao na lista, para escalonar a animacao das notas a lapis.
-  final int ordem;
 
   @override
   State<MateriaCard> createState() => _MateriaCardState();
@@ -22,7 +19,7 @@ class _MateriaCardState extends State<MateriaCard> {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final a = widget.analise;
     final d = a.disciplina;
     final (:nome, :sufixo) = nomeMateria(d.nomeBruto);
@@ -54,7 +51,7 @@ class _MateriaCardState extends State<MateriaCard> {
                             ),
                             Text(
                               sufixo.isEmpty ? d.codDisc : sufixo,
-                              style: TextStyle(fontSize: 13, color: c.lapis),
+                              style: TextStyle(fontSize: 13, color: c.texto2),
                             ),
                           ],
                         ),
@@ -64,7 +61,7 @@ class _MateriaCardState extends State<MateriaCard> {
                         child: AnimatedRotation(
                           turns: _aberta ? 0.5 : 0,
                           duration: const Duration(milliseconds: 200),
-                          child: Icon(Icons.expand_more, color: c.lapis),
+                          child: Icon(Icons.expand_more, color: c.texto2),
                         ),
                       ),
                     ],
@@ -91,9 +88,9 @@ class _MateriaCardState extends State<MateriaCard> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      TracinhosDeFalta(a.faltas),
+                      BarraDeFaltas(a.faltas),
                       const Spacer(),
-                      MarcaTexto(a.situacao.rotulo, tom: a.situacao.tom),
+                      Selo(a.situacao.rotulo, tom: a.situacao.tom),
                     ],
                   ),
                 ],
@@ -112,7 +109,7 @@ class _MateriaCardState extends State<MateriaCard> {
     );
   }
 
-  Widget _nota(Caderno c, Analise a, int i) {
+  Widget _nota(Paleta c, Analise a, int i) {
     final rotulo = 'N${i + 1}';
     final nota = a.disciplina.notas[i];
     if (nota != null) {
@@ -123,7 +120,7 @@ class _MateriaCardState extends State<MateriaCard> {
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w500,
-            color: nota < notaMinimaAprovacao ? c.canetaVermelha : c.tinta,
+            color: nota < notaMinimaAprovacao ? c.critico : c.texto,
           ),
         ),
       );
@@ -133,22 +130,19 @@ class _MateriaCardState extends State<MateriaCard> {
       return _Celula(
         rotulo: rotulo,
         semantica: '$rotulo sem nota',
-        child: Text('–', style: TextStyle(fontSize: 17, color: c.lapis)),
+        child: Text('–', style: TextStyle(fontSize: 17, color: c.texto2)),
       );
     }
     return _Celula(
       rotulo: rotulo,
       semantica:
           '$rotulo ainda sem nota; precisa de pelo menos ${fmt(precisa)}',
-      child: EscritoALapis(
-        ordem: widget.ordem * 2 + i,
-        child: Text(
-          '≥${fmt(precisa)}',
-          style: c.mao.copyWith(
-            fontSize: 19,
-            height: 1.1,
-            color: precisa > notaMaxima ? c.canetaVermelha : c.lapis,
-          ),
+      child: Text(
+        'mín. ${fmt(precisa)}',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: precisa > notaMaxima ? FontWeight.w600 : FontWeight.w400,
+          color: precisa > notaMaxima ? c.critico : c.texto3,
         ),
       ),
     );
@@ -163,11 +157,11 @@ class _Celula extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final coluna = Column(
       children: [
         SizedBox(height: 26, child: Center(child: child)),
-        Text(rotulo, style: TextStyle(fontSize: 11, color: c.lapis)),
+        Text(rotulo, style: TextStyle(fontSize: 11, color: c.texto2)),
       ],
     );
     return semantica == null
@@ -197,7 +191,7 @@ class _DetalhesState extends State<_Detalhes> {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final a = widget.analise;
     final d = a.disciplina;
     const h = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
@@ -232,7 +226,7 @@ class _DetalhesState extends State<_Detalhes> {
                 width: 28,
                 child: Text(
                   'N${i + 1}',
-                  style: TextStyle(fontSize: 14, color: c.lapis),
+                  style: TextStyle(fontSize: 14, color: c.texto2),
                 ),
               ),
               Expanded(
@@ -249,7 +243,10 @@ class _DetalhesState extends State<_Detalhes> {
                 child: Text(
                   fmt(v),
                   textAlign: TextAlign.right,
-                  style: c.mao.copyWith(fontSize: 20, color: c.tinta),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -261,7 +258,7 @@ class _DetalhesState extends State<_Detalhes> {
           runSpacing: 4,
           children: [
             Text('Soma ${fmt(sim.soma)}:', style: p),
-            MarcaTexto(
+            Selo(
               sim.passa
                   ? 'passa com média ${fmt(sim.media)}'
                   : 'faltariam ${fmt(sim.faltariam)} pontos',
@@ -275,7 +272,7 @@ class _DetalhesState extends State<_Detalhes> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: c.linha)),
+        border: Border(top: BorderSide(color: c.borda)),
       ),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
@@ -289,7 +286,7 @@ class _DetalhesState extends State<_Detalhes> {
           const SizedBox(height: 10),
           Text(
             'Disciplina ${d.codDisc}, turma ${d.codTurma}',
-            style: TextStyle(fontSize: 13, color: c.lapis),
+            style: TextStyle(fontSize: 13, color: c.texto2),
           ),
         ],
       ),

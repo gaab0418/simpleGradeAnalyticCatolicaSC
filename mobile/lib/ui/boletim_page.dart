@@ -6,6 +6,7 @@ import '../data/portal.dart';
 import '../domain/regras.dart';
 import '../domain/resumo.dart';
 import '../state/app_controller.dart';
+import 'widgets/componentes.dart';
 import 'widgets/materia_card.dart';
 
 class BoletimPage extends StatelessWidget {
@@ -14,7 +15,7 @@ class BoletimPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final h = app.historico;
     final semestre = app.semestreAtual;
     final materias = semestre == null
@@ -49,7 +50,7 @@ class BoletimPage extends StatelessWidget {
                         if (h?.aluno.ra.isNotEmpty ?? false)
                           'RA ${h!.aluno.ra}',
                       ].where((s) => s.isNotEmpty).join(', '),
-                      style: TextStyle(fontSize: 14, color: c.lapis),
+                      style: TextStyle(fontSize: 14, color: c.texto2),
                     ),
                   ],
                 ),
@@ -80,12 +81,12 @@ class BoletimPage extends StatelessWidget {
                     label: Text(rotuloPeriodo(s.codigo)),
                     selected: s.codigo == app.periodo,
                     showCheckmark: false,
-                    selectedColor: c.tinta,
-                    backgroundColor: c.folha,
-                    side: BorderSide(color: c.linha),
+                    selectedColor: c.texto,
+                    backgroundColor: c.superficie,
+                    side: BorderSide(color: c.borda),
                     labelStyle: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: s.codigo == app.periodo ? c.papel : c.lapis,
+                      color: s.codigo == app.periodo ? c.fundo : c.texto2,
                     ),
                     onSelected: (_) => app.selecionarPeriodo(s.codigo),
                   );
@@ -98,29 +99,13 @@ class BoletimPage extends StatelessWidget {
                 ? app.progresso!
                 : resumo.manchete,
             style: const TextStyle(
-              fontSize: 28,
-              height: 1.12,
+              fontSize: 22,
+              height: 1.2,
               fontWeight: FontWeight.w700,
-              letterSpacing: -0.6,
+              letterSpacing: -0.4,
             ),
           ),
-          if (resumo.recado.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Transform.rotate(
-                angle: -0.01,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  resumo.recado,
-                  style: c.mao.copyWith(
-                    fontSize: 21,
-                    height: 1.3,
-                    color: c.canetaVermelha,
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 4),
           Text(
             [
               '${resumo.materias} matérias',
@@ -131,21 +116,16 @@ class BoletimPage extends StatelessWidget {
               else if (atualizado != null)
                 'Atualizado ${quando(atualizado)}',
             ].join('  ·  '),
-            style: TextStyle(fontSize: 13, color: c.lapis, height: 1.5),
+            style: TextStyle(fontSize: 13, color: c.texto2, height: 1.5),
           ),
           const SizedBox(height: 16),
           if (app.demo)
-            const _Aviso(
-              icone: Icons.science_outlined,
-              texto: 'Modo demonstração: estes dados são fictícios e nada é salvo.',
-            ),
+            const Aviso('Demonstração com dados fictícios. Nada é salvo.'),
           if (app.erro case final erro?)
-            _Aviso(
-              icone: Icons.cloud_off_outlined,
-              destaque: true,
-              texto:
-                  '${erro.mensagem}'
-                  '${atualizado != null ? ' Mostrando os dados salvos ${quando(atualizado)}.' : ''}',
+            Aviso(
+              '${erro.mensagem}'
+              '${atualizado != null ? ' Mostrando os dados salvos ${quando(atualizado)}.' : ''}',
+              cor: c.critico,
               acao: erro.tipo == FalhaPortal.credenciais
                   ? 'Entrar de novo'
                   : 'Tentar de novo',
@@ -154,81 +134,36 @@ class BoletimPage extends StatelessWidget {
                   : app.sincronizar,
             ),
           if (app.novidades.isNotEmpty)
-            _Aviso(
-              icone: Icons.auto_awesome_outlined,
-              texto: 'Nota nova no portal!\n${app.novidades.join('\n')}',
+            Aviso(
+              'Nota nova no portal:\n${app.novidades.join('\n')}',
+              cor: c.tons[Tom.ok]!.cor,
               acao: 'Ok',
               aoAgir: app.dispensarNovidades,
             ),
+          if (resumo.recado.isNotEmpty) Aviso(resumo.recado, cor: c.acento),
           if (materias.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),
               child: Text(
                 'Nenhuma matéria neste semestre. Escolha outro semestre lá em cima.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: c.lapis),
+                style: TextStyle(color: c.texto2),
               ),
             ),
-          for (final (i, m) in materias.indexed)
+          for (final m in materias)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: MateriaCard(
                 m,
-                ordem: i,
                 key: ValueKey('${semestre!.codigo}/${m.disciplina.chave}'),
               ),
             ),
           const SizedBox(height: 8),
           Text(
-            'Faltou uma nota? Ela aparece a lápis com o mínimo que você precisa tirar.',
+            'Em cada nota que falta aparece o mínimo que você precisa tirar. Toque na matéria para simular.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: c.lapis),
+            style: TextStyle(fontSize: 13, color: c.texto2),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Aviso extends StatelessWidget {
-  const _Aviso({
-    required this.icone,
-    required this.texto,
-    this.acao,
-    this.aoAgir,
-    this.destaque = false,
-  });
-  final IconData icone;
-  final String texto;
-  final String? acao;
-  final VoidCallback? aoAgir;
-  final bool destaque;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = Caderno.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-      decoration: BoxDecoration(
-        color: c.folha,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: destaque ? c.canetaVermelha : c.linha),
-      ),
-      child: Row(
-        children: [
-          Icon(icone, size: 20, color: destaque ? c.canetaVermelha : c.lapis),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(texto, style: const TextStyle(fontSize: 14)),
-            ),
-          ),
-          if (acao != null)
-            TextButton(onPressed: aoAgir, child: Text(acao!))
-          else
-            const SizedBox(width: 8),
         ],
       ),
     );

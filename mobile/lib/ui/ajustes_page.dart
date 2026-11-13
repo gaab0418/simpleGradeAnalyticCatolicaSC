@@ -4,7 +4,7 @@ import '../core/format.dart';
 import '../core/theme.dart';
 import '../data/armazenamento.dart';
 import '../state/app_controller.dart';
-import 'widgets/caderno_widgets.dart';
+import 'widgets/componentes.dart';
 
 class AjustesPage extends StatelessWidget {
   const AjustesPage(this.app, {super.key});
@@ -36,9 +36,9 @@ class AjustesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final sincronizado = app.sincronizadoEm;
-    final legenda = TextStyle(fontSize: 13, color: c.lapis);
+    final legenda = TextStyle(fontSize: 13, color: c.texto2);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -46,13 +46,13 @@ class AjustesPage extends StatelessWidget {
         const Text(
           'Ajustes',
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 22,
             fontWeight: FontWeight.w700,
-            letterSpacing: -0.6,
+            letterSpacing: -0.4,
           ),
         ),
         const SizedBox(height: 16),
-        Folha(
+        Painel(
           titulo: 'Aparência',
           child: SizedBox(
             width: double.infinity,
@@ -60,8 +60,8 @@ class AjustesPage extends StatelessWidget {
               showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: TemaApp.sistema, label: Text('Sistema')),
-                ButtonSegment(value: TemaApp.claro, label: Text('Caderno')),
-                ButtonSegment(value: TemaApp.escuro, label: Text('Lousa')),
+                ButtonSegment(value: TemaApp.claro, label: Text('Paleta')),
+                ButtonSegment(value: TemaApp.escuro, label: Text('Escuro')),
               ],
               selected: {app.prefs.tema},
               onSelectionChanged: (s) => app.definirTema(s.first),
@@ -69,7 +69,7 @@ class AjustesPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Folha(
+        Painel(
           titulo: 'Segurança',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,7 +99,7 @@ class AjustesPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Folha(
+        Painel(
           titulo: 'Dados',
           legenda: app.demo
               ? 'Modo demonstração: dados fictícios.'
@@ -129,9 +129,7 @@ class AjustesPage extends StatelessWidget {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: app.demo ? app.sair : () => _confirmarSaida(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: c.canetaVermelha,
-                ),
+                style: OutlinedButton.styleFrom(foregroundColor: c.critico),
                 icon: const Icon(Icons.logout),
                 label: Text(
                   app.demo ? 'Sair da demonstração' : 'Sair e apagar dados',

@@ -1,4 +1,4 @@
-/// Regras academicas da Catolica SC. Porte fiel da logica do index.html:
+/// Regras academicas (as mesmas de site/src/lib/dominio/regras.ts):
 /// a situacao e dada pela media que ainda falta tirar, nao pelos pontos.
 library;
 

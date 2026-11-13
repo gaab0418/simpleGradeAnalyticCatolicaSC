@@ -1,70 +1,56 @@
-# TOTVS RM Portal - Automatização de Notas & Faltas
+# Boletim Católica SC
 
-Este projeto automatiza o fluxo de autenticação e consulta de notas/faltas do portal acadêmico TOTVS RM e disponibiliza uma interface web em forma de boletim (caderno quadriculado no tema claro, lousa no tema escuro) para visualização.
+Notas, faltas e quanto falta para passar em cada matéria, a partir do portal acadêmico
+TOTVS RM da Católica SC — com o histórico de todos os semestres e uma análise de desempenho
+ao longo do curso.
 
-> **Novo: app de celular.** A pasta [`mobile/`](mobile/README.md) traz a versão Flutter (Android/iOS) com login salvo no cofre do aparelho, histórico offline de todos os semestres e uma aba de análise de desempenho. Ela fala direto com o portal e não precisa do `server.py`.
+Projeto de estudantes, **não oficial**, sem vínculo com a Católica SC ou a TOTVS.
 
-## Estrutura do Projeto
+| Pasta | O que é | Como rodar |
+|---|---|---|
+| [`site/`](site/README.md) | Site em Next.js, pronto para a Vercel. Sem banco de dados. | `cd site && npm install && npm run dev` |
+| [`mobile/`](mobile/README.md) | App Flutter para Android e iOS. | `cd mobile && flutter pub get && flutter run` |
+| [`docs/`](docs/ARQUITETURA.md) | Desenho do sistema e as decisões tomadas. | — |
 
-*   `index.html`: A interface gráfica de usuário (frontend) com visualização moderna, Tooltips e ordenação automática por prioridade de risco.
-*   `server.py`: O servidor web local em Python que realiza a autenticação síncrona automática, consome os endpoints do TOTVS RM, cruza as notas e faltas e expõe as APIs locais.
-*   `.env`: Arquivo local contendo as credenciais de acesso (`USUARIO` e `SENHA`).
-*   `.env.example`: Modelo de exemplo para preenchimento de credenciais.
-*   `requirements.txt`: Lista de dependências Python do projeto.
-*   `mobile/`: App Flutter para Android e iOS (veja o [README do app](mobile/README.md)).
-*   `run.bat`: Arquivo executável para iniciar o servidor Python no Windows com apenas dois cliques.
+Os dois produtos têm as mesmas regras e o mesmo visual, mas não compartilham código
+(TypeScript de um lado, Dart do outro). As regras acadêmicas ficam em
+`site/src/lib/dominio/` e `mobile/lib/domain/`; ao mudar uma, mude a outra — os testes
+dos dois lados cobrem os mesmos casos.
 
-## Requisitos
+## O que ele mostra
 
-Instale as dependências do projeto através do arquivo `requirements.txt`:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Como Usar
-
-1.  Renomeie o `.env.example` para `.env` e insira seu usuário e senha do RM Portal.
-2.  Dê dois cliques no arquivo `run.bat` para iniciar o servidor local.
-3.  Abra o seu navegador em: **[http://localhost:8080](http://localhost:8080)**
-
----
-
-## Recursos e Funcionalidades
-
-### 1. Seleção Automática de Período
-O servidor segue estritamente a regra:
-*   Se a data atual estiver entre **01 de Janeiro** e **01 de Agosto** de um determinado ano, ele seleciona por padrão o primeiro semestre letivo daquele ano (ex: `202611`).
-*   Caso contrário, ele seleciona o segundo semestre letivo (ex: `202623`).
-
-Você também pode alternar entre outros semestres passados (como `202523`) a qualquer momento usando a caixa de seleção na parte superior direita da tela.
-
-### 2. Situação de cada matéria (marca-texto)
-A situação é calculada pela **média que você ainda precisa nas provas que faltam**, e não pelo total de pontos que faltam. Assim, 9,8 na N1 com duas provas pela frente (precisa de média 4,1) aparece como tranquila, e não como crítica.
+- **Situação de cada matéria** pela média que você ainda precisa nas provas que faltam
+  (9,8 na N1 com duas provas pela frente é "Tranquila", não "Crítica").
+- **Simulador**: arraste as notas que faltam e veja se a soma fecha 18.
+- **Faltas** contra o limite de 20 aulas, com alerta a partir de 16.
+- **Desempenho**: média geral, evolução por semestre, nota média em cada prova,
+  distribuição das médias, faltas por semestre, maiores e menores médias.
+- **Nota nova**: avisa quando uma nota aparece no portal desde a última consulta.
 
 | Situação | Quando |
 |---|---|
-| Garantida / Aprovada | Soma >= 18 (média 6), ou o portal já marcou como aprovada |
+| Garantida / Aprovada | Soma ≥ 18 (média 6), ou o portal já marcou como aprovada |
 | Tranquila | Precisa de média até 5,0 no que falta |
 | Atenção | Precisa de 5,1 a 7,0 |
 | Apertada | Precisa de 7,1 a 8,5 |
 | Crítica | Precisa de 8,6 a 10,0 |
 | Fora de alcance | Nem com 10 fecha média 6 |
-| Limite de faltas | 16 a 20 faltas (resta 1 dia) |
-| Reprovada por falta | Mais de 20 faltas (5 dias de 4 aulas) |
-| Sem notas ainda | Nenhuma nota lançada |
+| Limite de faltas | 16 a 20 faltas |
+| Reprovada por falta | Mais de 20 faltas |
 
-### 3. Notas a lápis
-Cada nota ainda não lançada aparece escrita "a lápis" com o mínimo que você precisa tirar nela.
+## Privacidade, em uma frase
 
-### 4. Simulador "E se eu tirar…"
-Clique numa matéria para abrir o simulador: arraste as notas que faltam e veja na hora se a soma fecha 18.
+Ninguém guarda a sua senha em servidor: o app fala direto com o portal; o site precisa
+repassar o login pelo próprio servidor (o portal não aceita chamadas de navegador), mas não
+grava nada. Detalhes e limites em [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
 
-### 5. Faltas em tracinhos
-As faltas aparecem como 5 grupos de 4 tracinhos (um grupo por dia de aula). Cada dia inteiro perdido é riscado.
+## Licença
 
-### 6. Ordenação por risco
-As matérias mais urgentes ficam no topo, e o resumo diz em uma frase onde está o foco do semestre.
+[PolyForm Noncommercial 1.0.0](LICENSE.md): pode usar, estudar, modificar e compartilhar
+para fins **não comerciais** (estudo, uso pessoal, pesquisa, ensino). Uso comercial não é
+permitido.
 
-### 7. Cache e tema
-O servidor guarda cada semestre em cache por 5 minutos, então trocar de semestre e voltar é instantâneo. O botão **Atualizar** ignora o cache. O tema segue o sistema (caderno no claro, lousa no escuro) e pode ser trocado no botão da lua.
+Required Notice: Copyright (c) 2026 gaab0418 (https://github.com/gaab0418)
+
+A fonte Schibsted Grotesk é distribuída sob a SIL Open Font License (arquivos `OFL-*.txt`
+ao lado da fonte).

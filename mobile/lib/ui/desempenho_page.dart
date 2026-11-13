@@ -6,7 +6,7 @@ import '../core/theme.dart';
 import '../domain/desempenho.dart';
 import '../domain/regras.dart';
 import '../state/app_controller.dart';
-import 'widgets/caderno_widgets.dart';
+import 'widgets/componentes.dart';
 
 /// Dashboard: como o aluno vem se saindo ao longo do curso.
 class DesempenhoPage extends StatelessWidget {
@@ -15,7 +15,7 @@ class DesempenhoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final h = app.historico;
     final d = h == null ? null : Desempenho(h);
 
@@ -26,7 +26,7 @@ class DesempenhoPage extends StatelessWidget {
           child: Text(
             'A análise aparece quando houver pelo menos uma matéria com as três notas lançadas.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: c.lapis),
+            style: TextStyle(color: c.texto2),
           ),
         ),
       );
@@ -42,7 +42,7 @@ class DesempenhoPage extends StatelessWidget {
       children: [
         Text(
           'Desempenho no curso',
-          style: TextStyle(fontSize: 14, color: c.lapis),
+          style: TextStyle(fontSize: 14, color: c.texto2),
         ),
         const SizedBox(height: 4),
         Row(
@@ -51,10 +51,10 @@ class DesempenhoPage extends StatelessWidget {
             Text(
               fmt(media),
               style: const TextStyle(
-                fontSize: 64,
+                fontSize: 44,
                 height: 1,
                 fontWeight: FontWeight.w700,
-                letterSpacing: -2,
+                letterSpacing: -1,
               ),
             ),
             const SizedBox(width: 12),
@@ -77,13 +77,13 @@ class DesempenhoPage extends StatelessWidget {
                           Icon(
                             t >= 0 ? Icons.north_east : Icons.south_east,
                             size: 15,
-                            color: c.lapis,
+                            color: c.texto2,
                           ),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
                               '${t >= 0 ? '+' : '−'}${fmt(t.abs())} no último semestre',
-                              style: TextStyle(fontSize: 13, color: c.lapis),
+                              style: TextStyle(fontSize: 13, color: c.texto2),
                             ),
                           ),
                         ],
@@ -119,28 +119,46 @@ class DesempenhoPage extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 12),
         if (d.anotacoes.isNotEmpty) ...[
-          const SizedBox(height: 18),
-          for (final (i, nota) in d.anotacoes.indexed)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Transform.rotate(
-                angle: i.isEven ? -0.008 : 0.006,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  nota,
-                  style: c.mao.copyWith(
-                    fontSize: 19,
-                    height: 1.3,
-                    color: c.canetaVermelha,
+          Painel(
+            titulo: 'O que os números mostram',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final nota in d.anotacoes)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, right: 10),
+                          child: Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: c.acento,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            nota,
+                            style: const TextStyle(fontSize: 15, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
+              ],
             ),
+          ),
+          const SizedBox(height: 12),
         ],
-        const SizedBox(height: 14),
         if (d.evolucao.length >= 2) ...[
-          Folha(
+          Painel(
             titulo: 'Evolução da média',
             legenda: 'Média das matérias em cada semestre. Tracejado: mínimo para aprovar (6).',
             child: _GraficoEvolucao(d.evolucao),
@@ -148,7 +166,7 @@ class DesempenhoPage extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         if (d.mediaPorEtapa.every((v) => v != null)) ...[
-          Folha(
+          Painel(
             titulo: 'Ritmo dentro do semestre',
             legenda: 'Sua nota média em cada prova, somando todo o curso.',
             child: _GraficoBarras(
@@ -160,14 +178,14 @@ class DesempenhoPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        Folha(
+        Painel(
           titulo: 'Como suas médias se distribuem',
           legenda: 'Quantidade de matérias concluídas em cada faixa de média.',
           child: _Distribuicao(d.distribuicao),
         ),
         const SizedBox(height: 12),
         if (d.semestres.length >= 2 && d.faltasTotais > 0) ...[
-          Folha(
+          Painel(
             titulo: 'Faltas por semestre',
             legenda: 'Total de aulas perdidas, somando todas as matérias.',
             child: _GraficoBarras(
@@ -180,10 +198,10 @@ class DesempenhoPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        Folha(titulo: 'Onde você brilha', child: _Ranking(melhores)),
+        Painel(titulo: 'Onde você brilha', child: _Ranking(melhores)),
         if (piores.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Folha(titulo: 'Onde foi mais difícil', child: _Ranking(piores)),
+          Painel(titulo: 'Onde foi mais difícil', child: _Ranking(piores)),
         ],
       ],
     );
@@ -194,7 +212,7 @@ class DesempenhoPage extends StatelessWidget {
 String _curto(String rotulo) =>
     rotulo.length > 2 ? rotulo.substring(2) : rotulo;
 
-TextStyle _eixo(Caderno c) => TextStyle(fontSize: 11, color: c.lapis);
+TextStyle _eixo(Paleta c) => TextStyle(fontSize: 11, color: c.texto2);
 
 class _Numero extends StatelessWidget {
   const _Numero(this.valor, this.rotulo);
@@ -203,7 +221,7 @@ class _Numero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -220,7 +238,7 @@ class _Numero extends StatelessWidget {
             ),
             Text(
               rotulo,
-              style: TextStyle(fontSize: 12, color: c.lapis, height: 1.25),
+              style: TextStyle(fontSize: 12, color: c.texto2, height: 1.25),
             ),
           ],
         ),
@@ -235,7 +253,7 @@ class _GraficoEvolucao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final medias = [for (final s in semestres) s.media!];
     final minimo = medias.reduce((a, b) => a < b ? a : b);
     // Eixo comeca abaixo do menor valor (e sempre mostra a linha do 6).
@@ -265,13 +283,13 @@ class _GraficoEvolucao extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: 2,
                   getDrawingHorizontalLine: (_) =>
-                      FlLine(color: c.linha, strokeWidth: 1),
+                      FlLine(color: c.borda, strokeWidth: 1),
                 ),
                 extraLinesData: ExtraLinesData(
                   horizontalLines: [
                     HorizontalLine(
                       y: notaMinimaAprovacao,
-                      color: c.canetaVermelha,
+                      color: c.critico,
                       strokeWidth: 1.5,
                       dashArray: [5, 5],
                     ),
@@ -319,19 +337,19 @@ class _GraficoEvolucao extends StatelessWidget {
                   getTouchedSpotIndicator: (bar, idx) => [
                     for (final _ in idx)
                       TouchedSpotIndicatorData(
-                        FlLine(color: c.lapis, strokeWidth: 1),
+                        FlLine(color: c.texto2, strokeWidth: 1),
                         const FlDotData(),
                       ),
                   ],
                   touchTooltipData: LineTouchTooltipData(
                     fitInsideHorizontally: true,
                     fitInsideVertically: true,
-                    getTooltipColor: (_) => c.tinta,
+                    getTooltipColor: (_) => c.texto,
                     getTooltipItems: (spots) => [
                       for (final s in spots)
                         LineTooltipItem(
                           '${semestres[s.spotIndex].rotulo}\n',
-                          TextStyle(fontSize: 12, color: c.papel),
+                          TextStyle(fontSize: 12, color: c.fundo),
                           children: [
                             TextSpan(
                               text:
@@ -352,7 +370,7 @@ class _GraficoEvolucao extends StatelessWidget {
                       for (final (i, m) in medias.indexed)
                         FlSpot(i.toDouble(), m),
                     ],
-                    color: c.tinta,
+                    color: c.acento,
                     barWidth: 2,
                     isStrokeCapRound: true,
                     // O trecho ate um semestre em andamento e so estimativa.
@@ -362,9 +380,9 @@ class _GraficoEvolucao extends StatelessWidget {
                         final parcial = !semestres[i].encerrado;
                         return FlDotCirclePainter(
                           radius: 4.5,
-                          color: parcial ? c.folha : c.tinta,
+                          color: parcial ? c.superficie : c.acento,
                           strokeWidth: 2,
-                          strokeColor: parcial ? c.tinta : c.folha,
+                          strokeColor: parcial ? c.acento : c.superficie,
                         );
                       },
                     ),
@@ -384,15 +402,15 @@ class _GraficoEvolucao extends StatelessWidget {
                   height: 10,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: c.folha,
-                    border: Border.all(color: c.tinta, width: 2),
+                    color: c.superficie,
+                    border: Border.all(color: c.acento, width: 2),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Semestre em andamento: média parcial das notas já lançadas.',
-                    style: TextStyle(fontSize: 12, color: c.lapis),
+                    style: TextStyle(fontSize: 12, color: c.texto2),
                   ),
                 ),
               ],
@@ -420,7 +438,7 @@ class _GraficoBarras extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final maior = valores.reduce((a, b) => a > b ? a : b);
     final teto = maximo ?? (maior <= 0 ? 1 : maior * 1.2);
     String txt(double v) => inteiro ? '${v.toInt()}' : fmt(v);
@@ -436,7 +454,7 @@ class _GraficoBarras extends StatelessWidget {
             alignment: BarChartAlignment.spaceAround,
             borderData: FlBorderData(
               show: true,
-              border: Border(bottom: BorderSide(color: c.linha)),
+              border: Border(bottom: BorderSide(color: c.borda)),
             ),
             gridData: const FlGridData(show: false),
             titlesData: FlTitlesData(
@@ -454,7 +472,7 @@ class _GraficoBarras extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: c.tinta,
+                        color: c.texto,
                       ),
                     ),
                   ),
@@ -475,10 +493,10 @@ class _GraficoBarras extends StatelessWidget {
               touchTooltipData: BarTouchTooltipData(
                 fitInsideHorizontally: true,
                 fitInsideVertically: true,
-                getTooltipColor: (_) => c.tinta,
+                getTooltipColor: (_) => c.texto,
                 getTooltipItem: (group, i, rod, _) => BarTooltipItem(
                   descricao(i, rod.toY),
-                  TextStyle(fontSize: 13, color: c.papel),
+                  TextStyle(fontSize: 13, color: c.fundo),
                 ),
               ),
             ),
@@ -490,7 +508,7 @@ class _GraficoBarras extends StatelessWidget {
                     BarChartRodData(
                       toY: v,
                       width: valores.length > 5 ? 20 : 32,
-                      color: c.tinta,
+                      color: c.acento,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(4),
                       ),
@@ -513,7 +531,7 @@ class _Distribuicao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final maior = faixas
         .map((f) => f.quantidade)
         .reduce((a, b) => a > b ? a : b);
@@ -528,7 +546,7 @@ class _Distribuicao extends StatelessWidget {
                   width: 84,
                   child: Text(
                     f.rotulo,
-                    style: TextStyle(fontSize: 13, color: c.lapis),
+                    style: TextStyle(fontSize: 13, color: c.texto2),
                   ),
                 ),
                 Expanded(
@@ -541,7 +559,7 @@ class _Distribuicao extends StatelessWidget {
                             ? 0
                             : box.maxWidth * f.quantidade / maior,
                         decoration: BoxDecoration(
-                          color: f.abaixoDaMedia ? c.canetaVermelha : c.tinta,
+                          color: f.abaixoDaMedia ? c.critico : c.acento,
                           borderRadius: const BorderRadius.horizontal(
                             right: Radius.circular(4),
                           ),
@@ -575,7 +593,7 @@ class _Ranking extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     return Column(
       children: [
         for (final m in materias)
@@ -596,7 +614,7 @@ class _Ranking extends StatelessWidget {
                       ),
                       Text(
                         m.periodo,
-                        style: TextStyle(fontSize: 12, color: c.lapis),
+                        style: TextStyle(fontSize: 12, color: c.texto2),
                       ),
                     ],
                   ),
@@ -604,12 +622,10 @@ class _Ranking extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   fmt(m.media),
-                  style: c.mao.copyWith(
-                    fontSize: 24,
+                  style: TextStyle(
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: m.media < notaMinimaAprovacao
-                        ? c.canetaVermelha
-                        : c.tinta,
+                    color: m.media < notaMinimaAprovacao ? c.critico : c.texto,
                   ),
                 ),
               ],

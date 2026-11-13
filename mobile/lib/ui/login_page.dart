@@ -47,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     final ocupado = widget.app.sincronizando;
 
     return Center(
@@ -62,25 +62,18 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Seu boletim da Católica, no bolso.',
+                    'Suas notas e faltas, com o que falta para passar.',
                     style: TextStyle(
-                      fontSize: 32,
-                      height: 1.1,
+                      fontSize: 26,
+                      height: 1.15,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: -0.8,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Transform.rotate(
-                    angle: -0.01,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'notas, faltas e quanto falta pra passar',
-                      style: c.mao.copyWith(
-                        fontSize: 21,
-                        color: c.canetaVermelha,
-                      ),
-                    ),
+                  Text(
+                    'Entre com o mesmo usuário e senha do portal.',
+                    style: TextStyle(fontSize: 15, color: c.texto2),
                   ),
                   const SizedBox(height: 28),
                   TextFormField(
@@ -145,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                       _lembrar
                           ? 'A senha fica criptografada no cofre do sistema.'
                           : 'Nada é salvo: ao fechar o app, você entra de novo.',
-                      style: TextStyle(fontSize: 13, color: c.lapis),
+                      style: TextStyle(fontSize: 13, color: c.texto2),
                     ),
                   ),
                   if (_erro != null)
@@ -154,19 +147,12 @@ class _LoginPageState extends State<LoginPage> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 18,
-                            color: c.canetaVermelha,
-                          ),
+                          Icon(Icons.error_outline, size: 18, color: c.critico),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               _erro!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: c.canetaVermelha,
-                              ),
+                              style: TextStyle(fontSize: 14, color: c.critico),
                             ),
                           ),
                         ],
@@ -202,7 +188,7 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.shield_outlined, size: 18, color: c.lapis),
+                      Icon(Icons.shield_outlined, size: 18, color: c.texto2),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -210,7 +196,7 @@ class _LoginPageState extends State<LoginPage> {
                           'Sua senha não passa por nenhum outro servidor.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: c.lapis,
+                            color: c.texto2,
                             height: 1.4,
                           ),
                         ),

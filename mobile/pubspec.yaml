@@ -56,11 +56,6 @@ flutter:
   uses-material-design: true
 
   fonts:
-    - family: Kalam
-      fonts:
-        - asset: assets/fonts/Kalam-Regular.ttf
-        - asset: assets/fonts/Kalam-Bold.ttf
-          weight: 700
     - family: SchibstedGrotesk
       fonts:
         - asset: assets/fonts/SchibstedGrotesk.ttf

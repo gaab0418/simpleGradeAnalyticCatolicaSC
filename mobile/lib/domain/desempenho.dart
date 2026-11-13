@@ -152,8 +152,8 @@ class Desempenho {
     if (t != null && t.abs() >= 0.2) {
       out.add(
         t > 0
-            ? 'Você subiu ${fmt(t)} ponto de média no último semestre fechado. Continua assim!'
-            : 'Sua média caiu ${fmt(-t)} no último semestre fechado. Vale rever a rotina de estudo.',
+            ? 'Sua média subiu ${fmt(t)} no último semestre encerrado.'
+            : 'Sua média caiu ${fmt(-t)} no último semestre encerrado.',
       );
     }
     final e = mediaPorEtapa;
@@ -161,11 +161,11 @@ class Desempenho {
       final d = e[2]! - e[0]!;
       if (d >= 0.4) {
         out.add(
-          'Você costuma crescer ao longo do semestre: N3 fica ${fmt(d)} acima da N1.',
+          'Você costuma melhorar ao longo do semestre: a N3 fica ${fmt(d)} acima da N1.',
         );
       } else if (d <= -0.4) {
         out.add(
-          'Você larga bem e perde fôlego: a N3 fica ${fmt(-d)} abaixo da N1. Guarde energia para o fim.',
+          'Você começa bem e cai no fim: a N3 fica ${fmt(-d)} abaixo da N1.',
         );
       }
     }
@@ -177,15 +177,11 @@ class Desempenho {
     }
     final m = melhorSemestre;
     if (m != null && evolucao.where((s) => s.encerrado).length > 1) {
-      out.add(
-        'Seu melhor semestre foi ${m.rotulo}, com média ${fmt(m.media!)}.',
-      );
+      out.add('Melhor semestre: ${m.rotulo}, com média ${fmt(m.media!)}.');
     }
     final tx = taxaAprovacao;
     if (tx == 1 && concluidas.length >= 4) {
-      out.add(
-        'Nenhuma reprovação em ${concluidas.length} matérias. Ficha limpa.',
-      );
+      out.add('Nenhuma reprovação em ${concluidas.length} matérias.');
     }
     return out;
   }();

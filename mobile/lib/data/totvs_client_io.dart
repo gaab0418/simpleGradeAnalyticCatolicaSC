@@ -1,4 +1,4 @@
-/// Cliente do portal TOTVS RM da Catolica SC (porte do server.py).
+/// Cliente do portal TOTVS RM (mesmo fluxo de site/src/lib/servidor/totvs.ts).
 /// O celular fala direto com o portal: a senha nao passa por servidor nenhum.
 library;
 

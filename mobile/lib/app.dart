@@ -7,7 +7,6 @@ import 'ui/ajustes_page.dart';
 import 'ui/boletim_page.dart';
 import 'ui/desempenho_page.dart';
 import 'ui/login_page.dart';
-import 'ui/widgets/caderno_widgets.dart';
 
 class BoletimApp extends StatefulWidget {
   const BoletimApp(this.app, {super.key});
@@ -71,14 +70,12 @@ class _Tela extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     bottomNavigationBar: barra,
-    body: PapelQuadriculado(
-      child: SafeArea(
-        child: Center(
-          // Em tablet o conteudo nao estica alem de uma coluna confortavel.
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: child,
-          ),
+    body: SafeArea(
+      child: Center(
+        // Em tablet o conteudo nao estica alem de uma coluna confortavel.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: child,
         ),
       ),
     ),
@@ -165,14 +162,14 @@ class _BloqueioState extends State<_Bloqueio> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final c = Caderno.of(context);
+    final c = Paleta.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock_outline, size: 44, color: c.lapis),
+            Icon(Icons.lock_outline, size: 44, color: c.texto2),
             const SizedBox(height: 16),
             const Text(
               'Boletim trancado',

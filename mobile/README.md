@@ -1,7 +1,7 @@
 # Boletim Católica SC — app de celular
 
 Versão mobile (Flutter, Android e iOS) do boletim do portal TOTVS RM da Católica SC.
-Mesmas regras e a mesma cara de caderno/lousa da versão web, mais três coisas que
+Mesmas regras e o mesmo visual do [site](../site/README.md), mais três coisas que
 só fazem sentido no celular:
 
 - **Login salvo no aparelho**, no cofre do sistema (Android Keystore / iOS Keychain).
@@ -28,9 +28,8 @@ flutter test                # 27 testes
 Para abrir direto na demonstração (prints, apresentação):
 `flutter run --dart-define=DEMO=true`.
 
-> O app **não precisa do `server.py`**: o celular fala direto com
-> `portal.catolicasc.org.br`. O servidor Python existia só porque um navegador
-> não consegue chamar o portal (CORS); app nativo não tem essa limitação.
+> O app fala direto com `portal.catolicasc.org.br`, sem passar por servidor nenhum. O site
+> precisa de um repasse no servidor porque navegadores não conseguem chamar o portal (CORS).
 
 ## Arquitetura
 
@@ -39,14 +38,14 @@ lib/
   domain/   regras puras, sem Flutter: modelos, situação da matéria, resumo, desempenho
   data/     portal TOTVS (HTTP), cofre de credenciais, cache local, biometria, demo
   state/    AppController: sessão, sincronização e preferências (ChangeNotifier)
-  ui/       telas e widgets do "caderno"
+  ui/       telas e componentes
   core/     tema e formatação pt-BR
 ```
 
-- `domain/` é o porte fiel do JavaScript do `index.html` (`analisar`, resumo, simulador)
-  e é onde mora toda regra acadêmica. As telas só exibem.
+- `domain/` é onde mora toda regra acadêmica (as mesmas de `site/src/lib/dominio/`).
+  As telas só exibem.
 - `data/portal.dart` define o contrato `PortalGateway`; `totvs_client_io.dart` é a
-  implementação real (porte do `server.py`) e os testes usam um portal falso.
+  implementação real e os testes usam um portal falso.
 - Sincronização incremental: semestres encerrados não mudam mais, então só o
   semestre em andamento é consultado de novo. "Baixar todos os semestres de novo"
   (Ajustes) força a carga completa.
