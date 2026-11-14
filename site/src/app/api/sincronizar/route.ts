@@ -28,7 +28,9 @@ export async function POST(req: Request) {
   const corpo = await lerCorpo(req);
   const pular = new Set(
     Array.isArray(corpo?.pular)
-      ? corpo.pular.filter((p): p is string => typeof p === "string").slice(0, 40)
+      ? corpo.pular
+          .filter((p): p is string => typeof p === "string" && p.length <= 20 && /^[A-Za-z0-9_-]+$/.test(p))
+          .slice(0, 40)
       : [],
   );
 

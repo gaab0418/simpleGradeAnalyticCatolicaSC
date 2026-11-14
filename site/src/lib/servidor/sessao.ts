@@ -5,10 +5,11 @@
  * guarda nada: sem o cookie do navegador ele não tem credencial nenhuma.
  */
 import "server-only";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
 
-export const COOKIE_SESSAO = "boletim_sessao";
-export const VALIDADE_SEGUNDOS = 60 * 60 * 24 * 30;
+export const COOKIE_SESSAO =
+  process.env.NODE_ENV === "production" ? "__Secure-boletim_sessao" : "boletim_sessao";
+export const VALIDADE_SEGUNDOS = 60 * 60 * 24 * 7;
 
 export interface Credenciais {
   usuario: string;
@@ -19,7 +20,9 @@ function chave(): Buffer | null {
   const segredo = process.env.SESSAO_SEGREDO;
   // Segredo curto = chave fraca; melhor recusar do que fingir segurança.
   if (!segredo || segredo.length < 32) return null;
-  return createHash("sha256").update(segredo).digest();
+  return Buffer.from(
+    hkdfSync("sha256", segredo, "boletim-catolica-sc-salt-v1", "aes-256-gcm-sessao-v1", 32),
+  );
 }
 
 /** Sem `SESSAO_SEGREDO` configurado o site funciona, mas não mantém login. */
@@ -30,6 +33,7 @@ export function selar(c: Credenciais, agora = Date.now()): string | null {
   if (!k) return null;
   const iv = randomBytes(12);
   const cifra = createCipheriv("aes-256-gcm", k, iv);
+  cifra.setAAD(Buffer.from(COOKIE_SESSAO, "utf8"));
   const claro = JSON.stringify({ u: c.usuario, s: c.senha, exp: agora + VALIDADE_SEGUNDOS * 1000 });
   const corpo = Buffer.concat([cifra.update(claro, "utf8"), cifra.final()]);
   return Buffer.concat([iv, cifra.getAuthTag(), corpo]).toString("base64url");
@@ -40,11 +44,15 @@ export function abrir(valor: string | undefined, agora = Date.now()): Credenciai
   if (!k || !valor) return null;
   try {
     const bruto = Buffer.from(valor, "base64url");
+    if (bruto.length < 29) return null;
     const decifra = createDecipheriv("aes-256-gcm", k, bruto.subarray(0, 12));
+    decifra.setAAD(Buffer.from(COOKIE_SESSAO, "utf8"));
     decifra.setAuthTag(bruto.subarray(12, 28));
     const claro = Buffer.concat([decifra.update(bruto.subarray(28)), decifra.final()]);
     const { u, s, exp } = JSON.parse(claro.toString("utf8"));
-    if (typeof u !== "string" || typeof s !== "string" || typeof exp !== "number") return null;
+    if (typeof u !== "string" || typeof s !== "string" || typeof exp !== "number" || !u || !s) {
+      return null;
+    }
     return exp > agora ? { usuario: u, senha: s } : null;
   } catch {
     // adulterado, de outra chave ou corrompido

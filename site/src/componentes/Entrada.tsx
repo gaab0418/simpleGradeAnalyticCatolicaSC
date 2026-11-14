@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { acoes, useLoja } from "@/lib/cliente/loja";
 import { instituicao } from "@/lib/config";
+import { Faltas } from "./Boletim";
+import { IconeEscudo } from "./icones";
+import { Selo } from "./Situacao";
 
 export function Entrada() {
   const { ocupado } = useLoja();
@@ -69,7 +72,7 @@ export function Entrada() {
               Manter conectado neste navegador
               <small>
                 {lembrar
-                  ? "Não marque em computador compartilhado."
+                  ? "Válido por 7 dias. Não marque em computador compartilhado."
                   : "Ao fechar a aba, as notas somem e você entra de novo."}
               </small>
             </span>
@@ -88,32 +91,69 @@ export function Entrada() {
         </form>
       </section>
 
-      <aside className="painel como">
-        <h2>O que acontece com a sua senha</h2>
-        <dl>
-          <div>
-            <dt>Ela vai para o portal, passando por este site.</dt>
-            <dd>
-              O navegador não consegue falar direto com o portal, então o servidor deste site faz
-              o login por você. Ele não grava nem registra a senha.
-            </dd>
+      <div className="entrada-lado">
+        <div className="painel previa" aria-hidden="true">
+          <div className="previa-topo">
+            <div>
+              <strong>Compiladores</strong>
+              <span>CMP · Exemplo de cálculo automático</span>
+            </div>
+            <Selo tom="apertado">Limite de faltas</Selo>
           </div>
-          <div>
-            <dt>“Manter conectado” guarda a senha cifrada em um cookie.</dt>
-            <dd>
-              O cookie fica só no seu navegador e a página não consegue lê-lo. “Sair” apaga tudo.
-            </dd>
+          <div className="previa-notas">
+            <div>
+              <span>N1</span>
+              <strong className="nota baixa">3,5</strong>
+            </div>
+            <div>
+              <span>N2</span>
+              <strong className="nota precisa-inline">≥7,3</strong>
+            </div>
+            <div>
+              <span>N3</span>
+              <strong className="nota precisa-inline">≥7,3</strong>
+            </div>
+            <div className="previa-faltas">
+              <span>Faltas</span>
+              <Faltas faltas={17} />
+            </div>
           </div>
-          <div>
-            <dt>As notas ficam só neste navegador.</dt>
-            <dd>Não existe banco de dados: nada sobre você é armazenado no servidor.</dd>
-          </div>
-        </dl>
-        <p className="pequeno">
-          Projeto de estudantes, sem vínculo com a {instituicao.nome} ou a TOTVS.{" "}
-          <Link href="/privacidade">Privacidade e funcionamento</Link>
-        </p>
-      </aside>
+        </div>
+
+        <aside className="painel como">
+          <h2 className="como-titulo">
+            <IconeEscudo />
+            O que acontece com a sua senha
+          </h2>
+          <dl>
+            <div>
+              <dt>Ela vai para o portal, passando por este site.</dt>
+              <dd>
+                O navegador não consegue falar direto com o portal, então o servidor deste site faz
+                o login por você. Ele não grava nem registra a senha.
+              </dd>
+            </div>
+            <div>
+              <dt>“Manter conectado” guarda a senha cifrada em um cookie.</dt>
+              <dd>
+                O cookie fica só no seu navegador por até 7 dias e a página não consegue lê-lo.
+                “Sair” apaga tudo.
+              </dd>
+            </div>
+            <div>
+              <dt>As notas ficam só neste navegador.</dt>
+              <dd>
+                Não existe banco de dados: nada sobre você é armazenado no servidor (os dados
+                salvos aqui expiram em 7 dias).
+              </dd>
+            </div>
+          </dl>
+          <p className="pequeno">
+            Projeto de estudantes, sem vínculo com a {instituicao.nome} ou a TOTVS.{" "}
+            <Link href="/privacidade">Privacidade e funcionamento</Link>
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }

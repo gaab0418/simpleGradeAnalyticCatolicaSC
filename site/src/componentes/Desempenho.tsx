@@ -2,9 +2,11 @@
 
 import { useMemo } from "react";
 import { useLoja } from "@/lib/cliente/loja";
+import { regras } from "@/lib/config";
 import { calcularDesempenho, type MateriaRanqueada } from "@/lib/dominio/desempenho";
 import { dias, fmt } from "@/lib/dominio/formato";
 import { GraficoColunas, GraficoEvolucao } from "./graficos";
+import { IconeTendenciaCai, IconeTendenciaSobe } from "./icones";
 
 export function Desempenho() {
   const { historico } = useLoja();
@@ -33,36 +35,41 @@ export function Desempenho() {
         </div>
       </div>
 
-      <dl className="indicadores">
-        <div className="indicador">
-          <dt>Média geral</dt>
-          <dd>
-            {fmt(d.mediaGeral)}{" "}
+      <section className="painel hero-desempenho" aria-label="Resumo geral do curso">
+        <div className="hero-media-bloco">
+          <span className="hero-rotulo">Média geral</span>
+          <div className="hero-linha">
+            <strong className="hero-media">{fmt(d.mediaGeral)}</strong>
             {d.tendencia !== null && (
-              <small>
+              <span
+                className={`hero-tendencia${d.tendencia >= 0 ? " positiva" : " negativa"}`}
+              >
+                {d.tendencia >= 0 ? <IconeTendenciaSobe /> : <IconeTendenciaCai />}
                 {d.tendencia >= 0 ? "+" : "−"}
                 {fmt(Math.abs(d.tendencia))} no último semestre
-              </small>
+              </span>
             )}
-          </dd>
+          </div>
         </div>
-        <div className="indicador">
-          <dt>Aprovação</dt>
-          <dd>{Math.round((d.taxaAprovacao ?? 0) * 100)}%</dd>
-        </div>
-        <div className="indicador">
-          <dt>Matérias concluídas</dt>
-          <dd>
-            {d.concluidas} <small>{d.aprovadas} aprovadas</small>
-          </dd>
-        </div>
-        <div className="indicador">
-          <dt>Faltas no curso</dt>
-          <dd>
-            {d.faltasTotais} <small>aulas ({dias(d.faltasTotais)})</small>
-          </dd>
-        </div>
-      </dl>
+        <dl className="hero-metricas">
+          <div className="indicador">
+            <dt>Aprovação</dt>
+            <dd>{Math.round((d.taxaAprovacao ?? 0) * 100)}%</dd>
+          </div>
+          <div className="indicador">
+            <dt>Matérias concluídas</dt>
+            <dd>
+              {d.concluidas} <small>{d.aprovadas} aprovadas</small>
+            </dd>
+          </div>
+          <div className="indicador">
+            <dt>Faltas no curso</dt>
+            <dd>
+              {d.faltasTotais} <small>aulas · {dias(d.faltasTotais)}</small>
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       <div className="duas-colunas">
         {d.observacoes.length > 0 && (
@@ -84,6 +91,10 @@ export function Desempenho() {
           <section className="painel larga">
             <header>
               <h2>Média por semestre</h2>
+              <p className="painel-sub">
+                Média das matérias em cada semestre. Tracejado: mínimo para aprovar (
+                {regras.notaMinima}).
+              </p>
             </header>
             <div className="corpo">
               <GraficoEvolucao
@@ -95,7 +106,8 @@ export function Desempenho() {
               />
               {emAndamento && (
                 <p className="legenda">
-                  Ponto vazado: semestre em andamento, média parcial das notas já lançadas.
+                  Ponto vazado e trecho tracejado: semestre em andamento (média parcial das notas já
+                  lançadas).
                 </p>
               )}
             </div>
@@ -106,11 +118,15 @@ export function Desempenho() {
           <section className="painel">
             <header>
               <h2>Nota média em cada prova</h2>
+              <p className="painel-sub">
+                Ritmo dentro do semestre: sua média em N1, N2 e N3 ao longo do curso.
+              </p>
             </header>
             <div className="corpo">
               <GraficoColunas
                 descricao="Nota média em cada prova"
-                maximo={10}
+                maximo={regras.notaMaxima}
+                referencia={regras.notaMinima}
                 itens={d.mediaPorEtapa.map((v, i) => ({ rotulo: `N${i + 1}`, valor: v! }))}
               />
             </div>
@@ -120,6 +136,9 @@ export function Desempenho() {
         <section className="painel">
           <header>
             <h2>Matérias por faixa de média</h2>
+            <p className="painel-sub">
+              Quantidade de matérias concluídas em cada faixa de nota.
+            </p>
           </header>
           <div className="corpo faixas">
             {[...d.distribuicao].reverse().map((f) => (
@@ -140,6 +159,9 @@ export function Desempenho() {
           <section className="painel larga">
             <header>
               <h2>Faltas por semestre (aulas)</h2>
+              <p className="painel-sub">
+                Total de aulas perdidas, somando todas as matérias do período.
+              </p>
             </header>
             <div className="corpo">
               <GraficoColunas
@@ -172,8 +194,16 @@ function Ranking({ titulo, materias }: { titulo: string; materias: MateriaRanque
                 <td>
                   {m.nome}
                   <small>{m.periodo}</small>
+                  <span className="ranking-trilho" aria-hidden="true">
+                    <i
+                      className={m.media < regras.notaMinima ? "critica" : undefined}
+                      style={{ width: `${Math.min(100, (m.media / regras.notaMaxima) * 100)}%` }}
+                    />
+                  </span>
                 </td>
-                <td>{fmt(m.media)}</td>
+                <td className={m.media < regras.notaMinima ? "critica" : undefined}>
+                  {fmt(m.media)}
+                </td>
               </tr>
             ))}
           </tbody>

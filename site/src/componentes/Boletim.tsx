@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, type CSSProperties } from "react";
 import { acoes, useLoja } from "@/lib/cliente/loja";
 import { regras } from "@/lib/config";
 import { dias, fmt, nomeMateria, quando, rotuloPeriodo, titulo } from "@/lib/dominio/formato";
@@ -18,6 +18,14 @@ export function Boletim() {
   const materias = semestre ? analisarSemestre(semestre) : [];
   const r = resumir(materias);
   const { aluno } = historico;
+
+  const pendentesNaMateria = (m: (typeof materias)[number]) =>
+    encerrada(m.situacao) || passou(m.situacao) || m.precisa === null
+      ? 0
+      : m.disciplina.notas.filter((n) => n === null).length;
+  const ordens = materias.map((_, idx) =>
+    materias.slice(0, idx).reduce((soma, ant) => soma + pendentesNaMateria(ant), 0),
+  );
 
   const alternar = (chave: string) =>
     setAbertas((atual) => {
@@ -37,23 +45,23 @@ export function Boletim() {
               .join(" · ")}
           </p>
         </div>
-        <label>
-          <span className="so-leitor">Semestre</span>
-          <select
-            className="seletor"
-            value={periodo ?? ""}
-            onChange={(e) => {
-              setAbertas(new Set());
-              acoes.selecionarPeriodo(e.target.value);
-            }}
-          >
-            {historico.semestres.map((s) => (
-              <option key={s.codigo} value={s.codigo}>
-                {rotuloPeriodo(s.codigo)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="periodos" role="group" aria-label="Semestre">
+          {historico.semestres.map((s) => (
+            <button
+              key={s.codigo}
+              type="button"
+              className="periodo-pill"
+              aria-pressed={s.codigo === periodo}
+              onClick={() => {
+                if (s.codigo === periodo) return;
+                setAbertas(new Set());
+                acoes.selecionarPeriodo(s.codigo);
+              }}
+            >
+              {rotuloPeriodo(s.codigo)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {demo && (
@@ -68,11 +76,11 @@ export function Boletim() {
             {semestre && ` Mostrando os dados salvos ${quando(semestre.atualizadoEm)}.`}
           </p>
           {erro.tipo === "credenciais" ? (
-            <button className="botao" onClick={acoes.sair}>
+            <button type="button" className="botao" onClick={acoes.sair}>
               Entrar de novo
             </button>
           ) : (
-            <button className="botao" onClick={() => acoes.sincronizar()}>
+            <button type="button" className="botao" onClick={() => acoes.sincronizar()}>
               Tentar de novo
             </button>
           )}
@@ -86,13 +94,14 @@ export function Boletim() {
       {novidades.length > 0 && (
         <div className="aviso novo" role="status">
           <p>{`Nota nova no portal:\n${novidades.join("\n")}`}</p>
-          <button className="botao" onClick={acoes.dispensarNovidades}>
+          <button type="button" className="botao" onClick={acoes.dispensarNovidades}>
             Ok
           </button>
         </div>
       )}
       {r.foco && (
         <div className="aviso foco">
+          <span className="aviso-etiqueta">Foco</span>
           <p>{r.foco}</p>
         </div>
       )}
@@ -115,7 +124,10 @@ export function Boletim() {
         <div className="indicador">
           <dt>Faltas no semestre</dt>
           <dd>
-            {r.faltas} <small>aulas</small>
+            {r.faltas}{" "}
+            <small>
+              {r.faltas === 1 ? "aula" : "aulas"} · {dias(r.faltas)}
+            </small>
           </dd>
         </div>
       </dl>
@@ -143,13 +155,18 @@ export function Boletim() {
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {materias.map((m) => {
+            <tbody key={periodo ?? "sem"}>
+              {materias.map((m, idx) => {
                 const chave = m.disciplina.chave;
                 const aberta = abertas.has(chave);
                 return (
                   <Fragment key={chave}>
-                    <Linha m={m} aberta={aberta} alternar={() => alternar(chave)} />
+                    <Linha
+                      m={m}
+                      aberta={aberta}
+                      ordemBase={ordens[idx]}
+                      alternar={() => alternar(chave)}
+                    />
                     {aberta && (
                       <tr className="detalhe">
                         <td colSpan={8} id={`detalhe-${chave}`}>
@@ -164,23 +181,35 @@ export function Boletim() {
           </table>
         )}
       </section>
-      <p className="pequeno" style={{ marginTop: 12 }}>
-        Clique em uma matéria para simular as notas que faltam.
+      <p className="pequeno rodape-boletim">
+        Notas precedidas por <strong>≥</strong> mostram o mínimo necessário em cada prova para fechar
+        média {regras.notaMinima}. Clique em uma matéria para simular.
         {semestre && ` Dados do portal consultados ${quando(semestre.atualizadoEm)}.`}
       </p>
     </div>
   );
 }
 
-function Linha({ m, aberta, alternar }: { m: Analise; aberta: boolean; alternar: () => void }) {
+function Linha({
+  m,
+  aberta,
+  ordemBase,
+  alternar,
+}: {
+  m: Analise;
+  aberta: boolean;
+  ordemBase: number;
+  alternar: () => void;
+}) {
   const d = m.disciplina;
   const { nome, sigla } = nomeMateria(d.nome);
   const definida = encerrada(m.situacao) || passou(m.situacao) || m.precisa === null;
 
   return (
-    <tr className="linha">
+    <tr className={`linha${aberta ? " aberta" : ""}`}>
       <td className="c-materia">
         <button
+          type="button"
           className="materia"
           aria-expanded={aberta}
           aria-controls={`detalhe-${d.chave}`}
@@ -193,17 +222,46 @@ function Linha({ m, aberta, alternar }: { m: Analise; aberta: boolean; alternar:
           </span>
         </button>
       </td>
-      {d.notas.map((n, i) => (
-        <td key={i} data-rotulo={`N${i + 1}`}>
-          {n === null ? (
-            <span className="nota vazia">–</span>
-          ) : (
-            <span className={`nota${n < regras.notaMinima ? " baixa" : ""}`}>{fmt(n)}</span>
-          )}
-        </td>
-      ))}
+      {d.notas.map((n, i) => {
+        if (n !== null) {
+          return (
+            <td key={i} data-rotulo={`N${i + 1}`}>
+              <span className={`nota${n < regras.notaMinima ? " baixa" : ""}`}>{fmt(n)}</span>
+            </td>
+          );
+        }
+        if (!definida && m.precisa !== null) {
+          const ordem = ordemBase + d.notas.slice(0, i).filter((x) => x === null).length;
+          return (
+            <td key={i} data-rotulo={`N${i + 1}`}>
+              <span
+                className={`nota precisa-inline${m.precisa > regras.notaMaxima ? " fora" : ""}`}
+                style={{ "--ordem": ordem } as CSSProperties}
+                title={`Mínimo necessário nesta prova para fechar média ${regras.notaMinima}`}
+                aria-label={`N${i + 1} sem nota; precisa de pelo menos ${fmt(m.precisa)}`}
+              >
+                ≥{fmt(m.precisa)}
+              </span>
+            </td>
+          );
+        }
+        return (
+          <td key={i} data-rotulo={`N${i + 1}`}>
+            <span className="nota vazia" aria-label={`N${i + 1} sem nota`}>
+              –
+            </span>
+          </td>
+        );
+      })}
       <td data-rotulo="Soma">
-        <span className="nota soma">{m.lancadas ? fmt(m.soma) : "–"}</span>
+        {m.lancadas ? (
+          <span className="nota soma">
+            {fmt(m.soma)}
+            <small className="soma-teto">/{regras.somaAprovacao}</small>
+          </span>
+        ) : (
+          <span className="nota vazia">–</span>
+        )}
       </td>
       <td className="c-precisa" data-rotulo="Precisa de">
         {definida ? (
@@ -219,14 +277,19 @@ function Linha({ m, aberta, alternar }: { m: Analise; aberta: boolean; alternar:
         <Faltas faltas={d.faltas} />
       </td>
       <td className="esq c-situacao">
-        <Selo tom={m.situacao.tom}>{m.situacao.rotulo}</Selo>
+        <div className="celula-situacao">
+          <Selo tom={m.situacao.tom}>{m.situacao.rotulo}</Selo>
+          {encerrada(m.situacao) && d.mediaFinal !== null && (
+            <span className="media-final">média {fmt(d.mediaFinal)}</span>
+          )}
+        </div>
       </td>
     </tr>
   );
 }
 
-/** Cinco blocos, um por dia de aula que pode ser perdido. */
-function Faltas({ faltas }: { faltas: number }) {
+/** Cinco grupos de 4 tracinhos, um por dia de aula que pode ser perdido. */
+export function Faltas({ faltas }: { faltas: number }) {
   const diasTotais = regras.limiteFaltas / regras.aulasPorDia;
   const sobra = Math.max(0, regras.limiteFaltas - faltas);
   return (
@@ -234,17 +297,25 @@ function Faltas({ faltas }: { faltas: number }) {
       className={`faltas${faltas >= regras.alertaFaltas ? " alerta" : ""}`}
       title={`${faltas} de ${regras.limiteFaltas} faltas. Pode faltar mais ${dias(sobra)}.`}
     >
-      <span className="barra" aria-hidden>
-        {Array.from({ length: diasTotais }, (_, i) => {
-          const usadas = Math.min(regras.aulasPorDia, Math.max(0, faltas - i * regras.aulasPorDia));
+      <span className="barra" aria-hidden="true">
+        {Array.from({ length: diasTotais }, (_, d) => {
+          const usadas = Math.min(
+            regras.aulasPorDia,
+            Math.max(0, faltas - d * regras.aulasPorDia),
+          );
+          const diaCheio = usadas === regras.aulasPorDia;
           return (
-            <span className="dia" key={i}>
-              <i style={{ width: `${(usadas / regras.aulasPorDia) * 100}%` }} />
+            <span className={`dia${diaCheio ? " cheio" : ""}`} key={d}>
+              {Array.from({ length: regras.aulasPorDia }, (_, t) => (
+                <i className={t < usadas ? "on" : undefined} key={t} />
+              ))}
             </span>
           );
         })}
       </span>
-      {faltas}/{regras.limiteFaltas}
+      <span className="falta-num">
+        {faltas}/{regras.limiteFaltas}
+      </span>
     </span>
   );
 }
@@ -252,7 +323,9 @@ function Faltas({ faltas }: { faltas: number }) {
 function Detalhe({ m }: { m: Analise }) {
   const d = m.disciplina;
   const pendentes = d.notas.flatMap((n, i) => (n === null ? [i] : []));
-  const inicial = Math.ceil(Math.min(regras.notaMaxima, m.precisa ?? regras.notaMinima) * 2) / 2;
+  const passoMeio = (v: number) =>
+    Math.min(regras.notaMaxima, Math.max(0, Math.ceil(v * 2) / 2));
+  const inicial = passoMeio(m.precisa ?? regras.notaMinima);
   const [palpites, setPalpites] = useState<Record<number, number>>(() =>
     Object.fromEntries(pendentes.map((i) => [i, inicial])),
   );
@@ -260,59 +333,107 @@ function Detalhe({ m }: { m: Analise }) {
   const fim = m.restantes === 0 || encerrada(m.situacao);
   const sim = simular(m, Object.values(palpites));
 
+  const aplicarAlvo = (valor: number) =>
+    setPalpites(Object.fromEntries(pendentes.map((i) => [i, passoMeio(valor)])));
+
+  const somaMaxima = regras.notaMaxima * d.notas.length;
+  const pctSoma = Math.min(100, Math.max(0, (sim.soma / somaMaxima) * 100));
+  const pctMeta = (regras.somaAprovacao / somaMaxima) * 100;
+
   return (
-    <div className="grade">
-      <div>
-        {fim ? (
-          <>
-            <h3>Notas</h3>
-            <p>
-              {d.mediaFinal !== null
-                ? `Média final ${fmt(d.mediaFinal)}. Situação no portal: ${d.situacao}.`
-                : `Todas as notas lançadas. Soma ${fmt(m.soma)} de ${regras.somaAprovacao}.`}
-            </p>
-          </>
-        ) : (
-          <>
-            <h3>E se eu tirar…</h3>
-            {pendentes.map((i) => (
-              <div className="controle" key={i}>
-                <label htmlFor={`p-${d.chave}-${i}`}>N{i + 1}</label>
-                <input
-                  id={`p-${d.chave}-${i}`}
-                  type="range"
-                  min={0}
-                  max={regras.notaMaxima}
-                  step={0.5}
-                  value={palpites[i]}
-                  onChange={(e) => setPalpites({ ...palpites, [i]: Number(e.target.value) })}
-                />
-                <output htmlFor={`p-${d.chave}-${i}`}>{fmt(palpites[i])}</output>
+    <div className="detalhe-caixa">
+      <div className="grade">
+        <div>
+          {fim ? (
+            <>
+              <h3>Notas</h3>
+              <p>
+                {d.mediaFinal !== null
+                  ? `Média final ${fmt(d.mediaFinal)}. Situação no portal: ${d.situacao}.`
+                  : `Todas as notas lançadas. Soma ${fmt(m.soma)} de ${regras.somaAprovacao}.`}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="sim-topo">
+                <h3>E se eu tirar…</h3>
+                <div className="atalhos-sim">
+                  <button
+                    type="button"
+                    className="atalho"
+                    onClick={() => aplicarAlvo(m.precisa ?? regras.notaMinima)}
+                  >
+                    Mínimo ({fmt(inicial)})
+                  </button>
+                  <button
+                    type="button"
+                    className="atalho"
+                    onClick={() => aplicarAlvo((24 - m.soma) / Math.max(1, m.restantes))}
+                  >
+                    Média 8
+                  </button>
+                  <button
+                    type="button"
+                    className="atalho"
+                    onClick={() => aplicarAlvo(regras.notaMaxima)}
+                  >
+                    Tudo 10
+                  </button>
+                </div>
               </div>
-            ))}
-            <p className="veredito" aria-live="polite">
-              Soma {fmt(sim.soma)}:
-              <Selo tom={sim.passa ? "ok" : "critico"}>
-                {sim.passa
-                  ? `passa com média ${fmt(sim.media)}`
-                  : `faltariam ${fmt(sim.faltariam)} pontos`}
-              </Selo>
-            </p>
-          </>
-        )}
-      </div>
-      <div>
-        <h3>Faltas</h3>
-        <p>
-          {d.faltas > regras.limiteFaltas
-            ? `Você passou do limite: ${d.faltas} faltas de ${regras.limiteFaltas} permitidas.`
-            : d.faltas === 0
-              ? `Nenhuma falta até agora. Dá para faltar até ${dias(sobra)} antes de reprovar.`
-              : `Você faltou ${dias(d.faltas)} (${d.faltas} aulas). Ainda pode faltar ${dias(sobra)} antes de reprovar.`}
-        </p>
-        <p className="pequeno" style={{ marginTop: 8 }}>
-          Disciplina {d.codDisc}, turma {d.codTurma}
-        </p>
+              {pendentes.map((i) => (
+                <div className="controle" key={i}>
+                  <label htmlFor={`p-${d.chave}-${i}`}>N{i + 1}</label>
+                  <input
+                    id={`p-${d.chave}-${i}`}
+                    type="range"
+                    min={0}
+                    max={regras.notaMaxima}
+                    step={0.5}
+                    value={palpites[i]}
+                    onChange={(e) => setPalpites({ ...palpites, [i]: Number(e.target.value) })}
+                  />
+                  <output htmlFor={`p-${d.chave}-${i}`}>{fmt(palpites[i])}</output>
+                </div>
+              ))}
+              <div className="progresso-sim" aria-hidden="true">
+                <div
+                  className={`progresso-preenchimento${sim.passa ? " passa" : ""}`}
+                  style={{ width: `${pctSoma}%` }}
+                />
+                <span
+                  className="progresso-meta"
+                  style={{ left: `${pctMeta}%` }}
+                  title={`Meta para aprovar: ${regras.somaAprovacao}`}
+                />
+              </div>
+              <p className="veredito" aria-live="polite">
+                Soma <strong>{fmt(sim.soma)}</strong> de {somaMaxima}:
+                <Selo tom={sim.passa ? "ok" : "critico"}>
+                  {sim.passa
+                    ? `passa com média ${fmt(sim.media)}`
+                    : `faltariam ${fmt(sim.faltariam)} pontos`}
+                </Selo>
+              </p>
+            </>
+          )}
+        </div>
+        <div>
+          <h3>Faltas</h3>
+          <p>
+            {d.faltas > regras.limiteFaltas
+              ? `Você passou do limite: ${d.faltas} faltas de ${regras.limiteFaltas} permitidas.`
+              : d.faltas === 0
+                ? `Nenhuma falta até agora. Dá para faltar até ${dias(sobra)} antes de reprovar.`
+                : `Você faltou ${dias(d.faltas)} (${d.faltas} aulas). Ainda pode faltar ${dias(sobra)} antes de reprovar.`}
+          </p>
+          <div className="detalhe-faltas">
+            <Faltas faltas={d.faltas} />
+          </div>
+          <p className="pequeno" style={{ marginTop: 10 }}>
+            Disciplina {d.codDisc}, turma {d.codTurma}
+          </p>
+        </div>
       </div>
     </div>
   );

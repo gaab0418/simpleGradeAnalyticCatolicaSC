@@ -29,6 +29,7 @@ export interface Estado {
 
 const CHAVE = "boletim.v1";
 const VALIDADE_MS = 15 * 60_000;
+const TTL_SALVO_MS = 7 * 86_400_000;
 
 const inicial: Estado = {
   fase: "carregando",
@@ -66,6 +67,7 @@ export function useLoja(): Estado {
 interface Salvo {
   historico: Historico;
   lembrado: boolean;
+  salvoEm: number;
 }
 
 function ler(): Salvo | null {
@@ -73,8 +75,13 @@ function ler(): Salvo | null {
     try {
       const bruto = area.getItem(CHAVE);
       if (!bruto) continue;
-      const salvo = JSON.parse(bruto) as Salvo;
-      if (salvo?.historico?.semestres && salvo.historico.aluno) return salvo;
+      const salvo = JSON.parse(bruto) as Partial<Salvo>;
+      if (!salvo?.historico?.semestres || !salvo.historico.aluno) continue;
+      if (typeof salvo.salvoEm !== "number" || Date.now() - salvo.salvoEm > TTL_SALVO_MS) {
+        apagar();
+        return null;
+      }
+      return salvo as Salvo;
     } catch {
       // armazenamento bloqueado ou conteúdo inválido: ignora
     }
@@ -87,7 +94,7 @@ function salvar(historico: Historico, lembrado: boolean) {
   try {
     (lembrado ? localStorage : sessionStorage).setItem(
       CHAVE,
-      JSON.stringify({ historico, lembrado } satisfies Salvo),
+      JSON.stringify({ historico, lembrado, salvoEm: Date.now() } satisfies Salvo),
     );
   } catch {
     // sem espaço ou modo privado: o site segue funcionando só em memória
@@ -248,7 +255,13 @@ export const acoes = {
     apagar();
     mudar({ ...inicial, fase: "deslogado" });
     if (!eraDemo) {
-      await fetch("/api/sair", { method: "POST", credentials: "same-origin" }).catch(() => {});
+      const encerrar = () => fetch("/api/sair", { method: "POST", credentials: "same-origin" });
+      try {
+        const resp = await encerrar();
+        if (!resp.ok) await encerrar().catch(() => {});
+      } catch {
+        await encerrar().catch(() => {});
+      }
     }
   },
 

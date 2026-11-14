@@ -39,7 +39,7 @@ export default function Privacidade() {
               Se você marcar “Manter conectado”, usuário e senha são cifrados (AES-256-GCM) com
               uma chave que só o servidor conhece e devolvidos ao seu navegador em um cookie que
               a página não consegue ler. O servidor só consegue usá-lo quando o seu navegador o
-              envia. O cookie vale 30 dias.
+              envia. O cookie vale 7 dias.
             </li>
             <li>
               Mesmo assim, quem hospeda o site tem meios técnicos de alterar o código e ver o que
@@ -50,7 +50,10 @@ export default function Privacidade() {
 
           <h2>O que fica no seu navegador</h2>
           <ul>
-            <li>As notas e faltas de cada semestre, para abrir rápido e funcionar offline.</li>
+            <li>
+              As notas e faltas de cada semestre, para abrir rápido e funcionar offline (expiram
+              automaticamente após 7 dias sem uso).
+            </li>
             <li>A preferência de tema claro ou escuro.</li>
             <li>
               Sem “Manter conectado”, as notas ficam só na aba aberta e somem quando ela é

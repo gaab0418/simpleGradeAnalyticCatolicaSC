@@ -1,6 +1,12 @@
 import { cookies } from "next/headers";
 import { baixarBoletim, respostaDeErro, SEM_CACHE } from "@/lib/servidor/boletim";
-import { campoTexto, dentroDoLimite, lerCorpo, mesmaOrigem } from "@/lib/servidor/protecao";
+import {
+  campoTexto,
+  dentroDoLimite,
+  dentroDoLimiteConta,
+  lerCorpo,
+  mesmaOrigem,
+} from "@/lib/servidor/protecao";
 import { COOKIE_SESSAO, VALIDADE_SEGUNDOS, opcoesCookie, selar } from "@/lib/servidor/sessao";
 
 export const maxDuration = 60;
@@ -20,6 +26,12 @@ export async function POST(req: Request) {
   const senha = campoTexto(corpo?.senha);
   if (!usuario || !senha) {
     return Response.json({ erro: "Informe usuário e senha." }, { status: 400, headers: SEM_CACHE });
+  }
+  if (!dentroDoLimiteConta(usuario)) {
+    return Response.json(
+      { erro: "Muitas tentativas para esta conta. Espere alguns minutos e tente de novo.", tipo: "limite" },
+      { status: 429, headers: SEM_CACHE },
+    );
   }
 
   try {

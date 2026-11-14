@@ -3,7 +3,13 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { dentroDoLimite, mesmaOrigem } from "@/lib/servidor/protecao";
+import {
+  dentroDoLimite,
+  dentroDoLimiteConta,
+  lerCorpo,
+  limparTentativas,
+  mesmaOrigem,
+} from "@/lib/servidor/protecao";
 import { abrir, podeLembrar, selar } from "@/lib/servidor/sessao";
 import { ErroPortal, SessaoPortal, parseNota } from "@/lib/servidor/totvs";
 
@@ -162,6 +168,45 @@ describe("cliente do portal", () => {
     ).rejects.toMatchObject({ tipo: "portal" });
   });
 
+  it("rejeita cookie injetado no token de login", async () => {
+    const falso: typeof fetch = async (input) => {
+      const u = String(input);
+      if (u.endsWith("/Login")) {
+        const token = encodeURIComponent(Buffer.from("ok; ADMIN=1\r\nX-Test: 1").toString("base64"));
+        return new Response(JSON.stringify({ data: { value: token } }), { status: 200 });
+      }
+      return new Response(null, { status: 200 });
+    };
+    await expect(
+      SessaoPortal.entrar(USUARIO, SENHA, { base, fetch: falso }),
+    ).rejects.toMatchObject({ tipo: "portal" });
+  });
+
+  it("ignora Set-Cookie inválido e rejeita resposta maior que 2 MB", async () => {
+    let cookiesEnviados = "";
+    const falso: typeof fetch = async (input, init) => {
+      const u = String(input);
+      if (u.endsWith("/PortalEducacional/")) {
+        const resp = new Response("", { status: 200 });
+        Object.defineProperty(resp.headers, "getSetCookie", {
+          value: () => ["SESSAO=abc; Path=/", "bad name=1; Path=/", "INJ=x\r\nEvil: 1"],
+        });
+        return resp;
+      }
+      if (u.endsWith("/Login")) {
+        cookiesEnviados = (init?.headers as Record<string, string>)?.cookie ?? "";
+        return new Response("x".repeat(2 * 1024 * 1024 + 16), { status: 200 });
+      }
+      return new Response("{}", { status: 200 });
+    };
+    await expect(
+      SessaoPortal.entrar(USUARIO, SENHA, { base, fetch: falso }),
+    ).rejects.toMatchObject({ tipo: "portal" });
+    expect(cookiesEnviados).toContain("SESSAO=abc");
+    expect(cookiesEnviados).not.toContain("bad name");
+    expect(cookiesEnviados).not.toContain("INJ=");
+  });
+
   it("nota embrulhada em HTML e com vírgula", () => {
     expect(parseNota("<font color=red>3,3</font>")).toBe(3.3);
     expect(parseNota("")).toBeNull();
@@ -180,12 +225,13 @@ describe("cookie de sessão", () => {
     expect(podeLembrar()).toBe(false);
   });
 
-  it("cifra, abre, expira e rejeita adulteração", () => {
+  it("cifra com HKDF+AAD, expira em 7 dias e rejeita adulteração", () => {
     process.env.SESSAO_SEGREDO = "a".repeat(48);
     const selo = selar(c, 1000)!;
     expect(selo).not.toContain("segredo");
     expect(abrir(selo, 2000)).toEqual(c);
-    expect(abrir(selo, 1000 + 31 * 86_400_000)).toBeNull();
+    expect(abrir(selo, 1000 + 6 * 86_400_000)).toEqual(c);
+    expect(abrir(selo, 1000 + 8 * 86_400_000)).toBeNull();
     const adulterado = selo.slice(0, -2) + (selo.endsWith("A") ? "B" : "A") + selo.slice(-1);
     expect(abrir(adulterado, 2000)).toBeNull();
     // Dois selos da mesma senha são diferentes (IV aleatório).
@@ -197,19 +243,80 @@ describe("cookie de sessão", () => {
 });
 
 describe("proteções das rotas", () => {
+  beforeEach(() => limparTentativas());
+
   const req = (headers: Record<string, string>) =>
     new Request("http://site.test/api/entrar", { method: "POST", headers });
 
-  it("só aceita a própria origem", () => {
+  it("só aceita a própria origem e bloqueia Sec-Fetch-Site externo", () => {
     expect(mesmaOrigem(req({ origin: "https://site.test", host: "site.test" }))).toBe(true);
+    expect(
+      mesmaOrigem(
+        req({
+          origin: "https://site.test",
+          "x-forwarded-host": "site.test, proxy.internal",
+          "sec-fetch-site": "same-origin",
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      mesmaOrigem(
+        req({
+          origin: "https://site.test",
+          host: "site.test",
+          "sec-fetch-site": "cross-site",
+        }),
+      ),
+    ).toBe(false);
     expect(mesmaOrigem(req({ origin: "https://outro.test", host: "site.test" }))).toBe(false);
     expect(mesmaOrigem(req({ host: "site.test" }))).toBe(false);
   });
 
-  it("limita tentativas por IP", () => {
+  it("limita tentativas por IP e não reseta bloqueios com 5000 IPs forjados", () => {
     const r = req({ "x-forwarded-for": "203.0.113.9" });
     for (let i = 0; i < 8; i++) expect(dentroDoLimite(r, 1000)).toBe(true);
     expect(dentroDoLimite(r, 1000)).toBe(false);
+
+    for (let i = 0; i < 5005; i++) {
+      dentroDoLimite(req({ "x-forwarded-for": `198.51.${Math.floor(i / 256)}.${i % 256}` }), 1001);
+    }
+    expect(dentroDoLimite(r, 1002)).toBe(false);
     expect(dentroDoLimite(r, 1000 + 6 * 60_000)).toBe(true);
+  });
+
+  it("limita força bruta distribuída por conta", () => {
+    for (let i = 0; i < 8; i++) expect(dentroDoLimiteConta("Aluno.Teste", 1000)).toBe(true);
+    expect(dentroDoLimiteConta("aluno.teste", 1000)).toBe(false);
+    expect(dentroDoLimiteConta("aluno.teste", 1000 + 6 * 60_000)).toBe(true);
+  });
+
+  it("rejeita payloads maiores que maxBytes no stream sem ler tudo", async () => {
+    const grande = new Request("http://site.test/api/entrar", {
+      method: "POST",
+      body: JSON.stringify({ usuario: "a".repeat(5000) }),
+    });
+    expect(await lerCorpo(grande, 4096)).toBeNull();
+
+    let chunksLidos = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        chunksLidos++;
+        ctrl.enqueue(new Uint8Array(1500).fill(97));
+        if (chunksLidos >= 10) ctrl.close();
+      },
+    });
+    const reqStream = new Request("http://site.test/api/entrar", {
+      method: "POST",
+      body: stream,
+      duplex: "half",
+    } as RequestInit);
+    expect(await lerCorpo(reqStream, 4096)).toBeNull();
+    expect(chunksLidos).toBeLessThan(5);
+
+    const valido = new Request("http://site.test/api/entrar", {
+      method: "POST",
+      body: JSON.stringify({ usuario: "aluno" }),
+    });
+    expect(await lerCorpo(valido, 4096)).toEqual({ usuario: "aluno" });
   });
 });
