@@ -32,9 +32,33 @@ export function nomeMateria(bruto: string): { nome: string; sigla: string } {
   return { nome: titulo(nome), sigla: resto.join(" - ") };
 }
 
+/** Separa código de período em ano e semestre (ex.: 202623 -> { ano: "2026", semestre: "2" }). */
+export const partesPeriodo = (
+  cod: string,
+): { ano: string; semestre: string | null } =>
+  cod.length >= 5
+    ? { ano: cod.slice(0, 4), semestre: cod.charAt(4) }
+    : { ano: cod, semestre: null };
+
 /** 202623 -> 2026/2 */
-export const rotuloPeriodo = (cod: string) =>
-  cod.length >= 5 ? `${cod.slice(0, 4)}/${cod.charAt(4)}` : cod;
+export const rotuloPeriodo = (cod: string) => {
+  const { ano, semestre } = partesPeriodo(cod);
+  return semestre ? `${ano}/${semestre}` : ano;
+};
+
+/** Agrupa semestres pelo ano do código, preservando a ordem original. */
+export function agruparSemestresPorAno<T extends { codigo: string }>(
+  semestres: readonly T[],
+): { ano: string; semestres: T[] }[] {
+  const porAno = new Map<string, T[]>();
+  for (const s of semestres) {
+    const { ano } = partesPeriodo(s.codigo);
+    const lista = porAno.get(ano);
+    if (lista) lista.push(s);
+    else porAno.set(ano, [s]);
+  }
+  return Array.from(porAno, ([ano, itens]) => ({ ano, semestres: itens }));
+}
 
 /** 6 aulas -> "1,5 dias" */
 export function dias(aulas: number): string {

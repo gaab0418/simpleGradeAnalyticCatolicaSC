@@ -177,7 +177,7 @@ void main() {
     expect(periodoPadrao(DateTime(2026, 1, 1)), '202611');
   });
 
-  test('formatação', () {
+  test('formatação e agrupamento por ano', () {
     expect(fmt(7.25), '7,3');
     expect(
       titulo('CÁLCULO DIFERENCIAL E INTEGRAL II'),
@@ -187,9 +187,26 @@ void main() {
       nome: 'Banco de Dados',
       sufixo: 'BD1',
     ));
+    expect(partesPeriodo('202623'), (ano: '2026', semestre: '2'));
+    expect(partesPeriodo('2026'), (ano: '2026', semestre: null));
     expect(rotuloPeriodo('202623'), '2026/2');
+    expect(rotuloPeriodo('ATIP'), 'ATIP');
     expect(dias(4), '1 dia');
     expect(dias(6), '1,5 dias');
+
+    final h = historicoDemo(DateTime(2026, 11, 12));
+    final grupos = agruparPorAno(h.semestres, (s) => s.codigo);
+    expect([for (final g in grupos) g.ano], ['2026', '2025', '2024']);
+    expect(
+      {
+        for (final g in grupos) g.ano: [for (final s in g.semestres) s.codigo],
+      },
+      {
+        '2026': ['202623', '202611'],
+        '2025': ['202523', '202511'],
+        '2024': ['202423', '202411'],
+      },
+    );
   });
 
   group('JSON do TOTVS', () {

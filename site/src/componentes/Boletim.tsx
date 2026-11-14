@@ -23,7 +23,7 @@ import {
 } from "@/componentes/ui/tooltip";
 import { acoes, useLoja } from "@/lib/cliente/loja";
 import { regras } from "@/lib/config";
-import { dias, fmt, nomeMateria, quando, rotuloPeriodo, titulo } from "@/lib/dominio/formato";
+import { agruparSemestresPorAno, dias, fmt, nomeMateria, partesPeriodo, quando, titulo } from "@/lib/dominio/formato";
 import {
   analisarSemestre,
   encerrada,
@@ -115,32 +115,64 @@ export function Boletim() {
             </p>
           </div>
           <div
-            className="inline-flex flex-wrap gap-0.5 rounded-[10px] border border-border bg-card p-[3px]"
+            className="flex flex-wrap items-center justify-end gap-2"
             role="group"
-            aria-label="Semestre"
+            aria-label="Semestres por ano"
           >
-            {historico.semestres.map((s) => {
-              const ativo = s.codigo === periodo;
+            {agruparSemestresPorAno(historico.semestres).map((grupo, idxAno) => {
+              const anoAtivo = grupo.semestres.some((s) => s.codigo === periodo);
               return (
-                <button
-                  key={s.codigo}
-                  type="button"
-                  aria-pressed={ativo}
+                <div
+                  key={grupo.ano}
+                  role="group"
+                  aria-label={`Ano ${grupo.ano}`}
                   className={cn(
-                    "cursor-pointer rounded-[7px] px-3 py-1.5 text-[13px] font-medium tabular-nums transition-colors",
-                    ativo
-                      ? "bg-foreground font-semibold text-card"
-                      : "text-muted-foreground hover:text-foreground",
+                    "inline-flex items-center gap-0.5 rounded-[10px] border p-[3px] transition-colors",
+                    anoAtivo
+                      ? "border-primary/45 bg-acento-suave shadow-2xs"
+                      : idxAno % 2 === 0
+                        ? "border-border bg-card"
+                        : "border-borda-forte/75 bg-secondary/80",
                   )}
-                  onClick={() => {
-                    if (ativo) return;
-                    setAbertas(new Set());
-                    setSims({});
-                    acoes.selecionarPeriodo(s.codigo);
-                  }}
                 >
-                  {rotuloPeriodo(s.codigo)}
-                </button>
+                  {grupo.semestres.map((s) => {
+                    const ativo = s.codigo === periodo;
+                    const { ano, semestre } = partesPeriodo(s.codigo);
+                    return (
+                      <button
+                        key={s.codigo}
+                        type="button"
+                        aria-pressed={ativo}
+                        className={cn(
+                          "cursor-pointer rounded-[7px] px-2.5 py-1.5 text-[13px] tabular-nums transition-colors",
+                          ativo
+                            ? "bg-foreground text-card shadow-xs"
+                            : anoAtivo
+                              ? "text-foreground/85 hover:bg-card/65 hover:text-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                        )}
+                        onClick={() => {
+                          if (ativo) return;
+                          setAbertas(new Set());
+                          setSims({});
+                          acoes.selecionarPeriodo(s.codigo);
+                        }}
+                      >
+                        <span className="font-bold tracking-tight">{ano}</span>
+                        {semestre && (
+                          <span
+                            className={cn(
+                              "font-medium",
+                              ativo ? "opacity-75" : "text-texto-3",
+                            )}
+                          >
+                            /{semestre}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>

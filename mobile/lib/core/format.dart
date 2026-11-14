@@ -44,9 +44,32 @@ String titulo(String? texto) {
   return (nome: titulo(partes.first), sufixo: partes.skip(1).join(' - '));
 }
 
+/// Separa código de período em ano e semestre (ex.: 202623 -> 2026, 2).
+({String ano, String? semestre}) partesPeriodo(String cod) => cod.length >= 5
+    ? (ano: cod.substring(0, 4), semestre: cod[4])
+    : (ano: cod, semestre: null);
+
 /// 202623 -> 2026/2
-String rotuloPeriodo(String cod) =>
-    cod.length >= 5 ? '${cod.substring(0, 4)}/${cod[4]}' : cod;
+String rotuloPeriodo(String cod) {
+  final p = partesPeriodo(cod);
+  return p.semestre != null ? '${p.ano}/${p.semestre}' : p.ano;
+}
+
+/// Agrupa itens pelo ano do código, preservando a ordem original.
+List<({String ano, List<T> semestres})> agruparPorAno<T>(
+  List<T> itens,
+  String Function(T) codigoDe,
+) {
+  final porAno = <String, List<T>>{};
+  for (final item in itens) {
+    final (:ano, semestre: _) = partesPeriodo(codigoDe(item));
+    porAno.putIfAbsent(ano, () => []).add(item);
+  }
+  return [
+    for (final entry in porAno.entries)
+      (ano: entry.key, semestres: entry.value),
+  ];
+}
 
 /// 6 aulas -> "1,5 dias"
 String dias(int aulas) {
