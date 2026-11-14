@@ -133,3 +133,17 @@ export async function lerCorpo(req: Request, maxBytes = 4096): Promise<Record<st
 
 export const campoTexto = (v: unknown, max = 200): string | null =>
   typeof v === "string" && v.length > 0 && v.length <= max ? v : null;
+
+/** Extrai códigos de períodos válidos a pular no portal (no máximo 40 entradas). */
+export function extrairPular(corpo: Record<string, unknown> | null): Set<string> {
+  return new Set(
+    Array.isArray(corpo?.pular)
+      ? corpo.pular
+          .filter(
+            (p): p is string =>
+              typeof p === "string" && p.length <= 20 && /^[A-Za-z0-9_-]+$/.test(p),
+          )
+          .slice(0, 40)
+      : [],
+  );
+}

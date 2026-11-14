@@ -8,7 +8,7 @@
 import { useSyncExternalStore } from "react";
 import { historicoDemo } from "../demo";
 import { notasNovas } from "../dominio/novidades";
-import { periodoPadrao, semestreEncerrado } from "../dominio/regras";
+import { periodoPadrao, semestreConsolidado } from "../dominio/regras";
 import { ordenarSemestres, type Aluno, type Historico, type Semestre } from "../dominio/tipos";
 
 export type Fase = "carregando" | "deslogado" | "pronto";
@@ -28,6 +28,7 @@ export interface Estado {
 }
 
 const CHAVE = "boletim.v1";
+const CHAVE_PASSADO = "boletim.passado.v1";
 const VALIDADE_MS = 15 * 60_000;
 const TTL_SALVO_MS = 7 * 86_400_000;
 
@@ -114,6 +115,79 @@ function apagar() {
   }
 }
 
+interface EntradaPassado {
+  ra: string;
+  semestres: Semestre[];
+}
+
+type ArquivoPassado = Record<string, EntradaPassado>;
+
+const normalizarUsuario = (usuario: string) => usuario.trim().toLowerCase();
+
+function lerArquivoPassado(): ArquivoPassado {
+  try {
+    const bruto = localStorage.getItem(CHAVE_PASSADO);
+    if (!bruto) return {};
+    const json: unknown = JSON.parse(bruto);
+    if (typeof json !== "object" || json === null || Array.isArray(json)) return {};
+    const valido: ArquivoPassado = {};
+    for (const [k, v] of Object.entries(json)) {
+      if (
+        typeof v === "object" &&
+        v !== null &&
+        !Array.isArray(v) &&
+        typeof (v as Partial<EntradaPassado>).ra === "string" &&
+        Array.isArray((v as Partial<EntradaPassado>).semestres)
+      ) {
+        valido[k] = {
+          ra: (v as EntradaPassado).ra,
+          semestres: (v as EntradaPassado).semestres.filter(
+            (s): s is Semestre =>
+              typeof s === "object" &&
+              s !== null &&
+              typeof s.codigo === "string" &&
+              Array.isArray(s.disciplinas),
+          ),
+        };
+      }
+    }
+    return valido;
+  } catch {
+    return {};
+  }
+}
+
+function lerPassado(usuario: string): Semestre[] {
+  const chave = normalizarUsuario(usuario);
+  if (!chave) return [];
+  const entrada = lerArquivoPassado()[chave];
+  return (entrada?.semestres ?? []).filter((s) => semestreConsolidado(s));
+}
+
+function salvarPassado(historico: Historico, usuario?: string | null) {
+  try {
+    const arquivo = lerArquivoPassado();
+    const chavePorUsuario = usuario ? normalizarUsuario(usuario) : "";
+    const chavePorRa =
+      !chavePorUsuario && historico.aluno.ra
+        ? (Object.entries(arquivo).find(([, e]) => e.ra === historico.aluno.ra)?.[0] ?? "")
+        : "";
+    const chave = chavePorUsuario || chavePorRa;
+    if (!chave) return;
+
+    const consolidados = ordenarSemestres(
+      historico.semestres.filter((s) => semestreConsolidado(s)),
+    );
+    arquivo[chave] = {
+      ra: historico.aluno.ra || arquivo[chave]?.ra || "",
+      semestres: consolidados,
+    };
+    localStorage.setItem(CHAVE_PASSADO, JSON.stringify(arquivo));
+  } catch {
+    // sem espaço ou modo privado: o site segue funcionando só em memória
+  }
+}
+
 // ---------- API do próprio site ----------
 
 interface RespostaApi {
@@ -188,12 +262,19 @@ export const acoes = {
   async entrar(usuario: string, senha: string, lembrar: boolean): Promise<string | null> {
     mudar({ ocupado: true, erro: null });
     try {
-      const r = await chamar("/api/entrar", { usuario, senha, lembrar });
-      const historico = mesclar(null, r);
+      const passado = lerPassado(usuario);
+      const r = await chamar("/api/entrar", {
+        usuario,
+        senha,
+        lembrar,
+        pular: passado.map((s) => s.codigo),
+      });
+      const historico = mesclar(passado.length ? { aluno: r.aluno, semestres: passado } : null, r);
       temCookieServidor = r.lembrado === true;
       preferirLocal = lembrar;
       sessaoMemoria = { usuario: usuario.trim(), senha };
       salvar(historico, temCookieServidor, preferirLocal);
+      if (lembrar) salvarPassado(historico, usuario);
       mudar({
         fase: "pronto",
         aba: "boletim",
@@ -228,7 +309,7 @@ export const acoes = {
     });
   },
 
-  /** Semestres encerrados só são buscados de novo com `completo`. */
+  /** Semestres consolidados só são buscados de novo com `completo`. */
   async sincronizar(completo = false) {
     const anterior = estado.historico;
     if (estado.ocupado || estado.demo || !estado.lembrado || !anterior) return;
@@ -236,12 +317,13 @@ export const acoes = {
     try {
       const pular = completo
         ? []
-        : anterior.semestres.filter(semestreEncerrado).map((s) => s.codigo);
+        : anterior.semestres.filter((s) => semestreConsolidado(s)).map((s) => s.codigo);
       const historico = mesclar(
         anterior,
         await chamar("/api/sincronizar", { pular, ...(sessaoMemoria ?? {}) }),
       );
       salvar(historico, temCookieServidor, preferirLocal);
+      if (preferirLocal) salvarPassado(historico, sessaoMemoria?.usuario);
       mudar({
         historico,
         novidades: notasNovas(anterior, historico),

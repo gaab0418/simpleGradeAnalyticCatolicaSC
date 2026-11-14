@@ -2,6 +2,7 @@
 library;
 
 import '../domain/models.dart';
+import '../domain/regras.dart';
 
 Historico historicoDemo(DateTime agora) {
   var seq = 0;
@@ -9,12 +10,14 @@ Historico historicoDemo(DateTime agora) {
     String nome,
     String sigla,
     List<double?> notas, {
+    double? nota4,
     int faltas = 0,
     String? situacao,
   }) {
-    final completas = notas.every((n) => n != null);
+    final efetivas = aplicarNota4(notas, nota4).notasEfetivas;
+    final completas = efetivas.every((n) => n != null);
     final media = completas
-        ? (notas.fold<double>(0, (a, b) => a + b!) / 3 * 10).round() / 10
+        ? (efetivas.fold<double>(0, (a, b) => a + b!) / 3 * 10).round() / 10
         : null;
     return Disciplina(
       chave: 'demo-${seq++}',
@@ -29,6 +32,7 @@ Historico historicoDemo(DateTime agora) {
               ? 'Aprovado'
               : 'Reprovado'),
       notas: notas,
+      nota4: nota4,
       mediaFinal: media,
       faltas: faltas,
     );
@@ -67,7 +71,13 @@ Historico historicoDemo(DateTime agora) {
         d('Banco de Dados I', 'BD1', [7.5, 8.0, 8.8]),
         d('Engenharia de Requisitos', 'REQ', [8.0, 8.4, 9.0], faltas: 4),
         d('Sistemas Operacionais', 'SOP', [6.0, 6.5, 7.5], faltas: 8),
-        d('Probabilidade e Estatística', 'PES', [5.5, 6.8, 7.0], faltas: 12),
+        d(
+          'Probabilidade e Estatística',
+          'PES',
+          [3.5, 6.8, 7.0],
+          nota4: 5.5,
+          faltas: 12,
+        ),
         d('Desenvolvimento Web', 'WEB', [9.0, 9.2, 9.6]),
       ]),
       s('202523', [

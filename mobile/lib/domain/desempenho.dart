@@ -91,7 +91,7 @@ class Desempenho {
   /// Media geral em cada etapa (N1, N2, N3) ao longo do curso.
   late final List<double?> mediaPorEtapa = [
     for (var i = 0; i < 3; i++)
-      _media(_todas.map((a) => a.disciplina.notas[i]).whereType<double>()),
+      _media(_todas.map((a) => a.notasEfetivas[i]).whereType<double>()),
   ];
 
   late final List<FaixaNotas> distribuicao = () {
@@ -99,7 +99,7 @@ class Desempenho {
         concluidas.where((a) => a.media! >= de && a.media! < ate).length;
     return [
       FaixaNotas(
-        'abaixo de 6',
+        'Abaixo de 6',
         entre(0, notaMinimaAprovacao),
         abaixoDaMedia: true,
       ),

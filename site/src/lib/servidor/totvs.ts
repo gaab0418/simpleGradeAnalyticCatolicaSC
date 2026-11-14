@@ -85,6 +85,21 @@ type Registro = Record<string, unknown>;
 const registros = (v: unknown): Registro[] =>
   Array.isArray(v) ? v.filter((x): x is Registro => typeof x === "object" && x !== null) : [];
 
+/** Extrai N4 (substitutiva/recuperação), ignorando colunas de média como "4 - Média Final". */
+export function extrairNota4(n: Registro): number | null {
+  if ("4 - Nota 4" in n) {
+    const direta = parseNota(n["4 - Nota 4"]);
+    if (direta !== null) return direta;
+  }
+  for (const [chave, valor] of Object.entries(n)) {
+    if (/^4\s*-\s*(?!\s*m[eé]dia)/i.test(chave)) {
+      const parsed = parseNota(valor);
+      if (parsed !== null) return parsed;
+    }
+  }
+  return null;
+}
+
 /** Cruza NotaEtapa com FaltaEtapa por IDTURMADISC. */
 export function montarDisciplinas(notas: unknown, faltas: unknown): Disciplina[] {
   const faltasPorTurma = new Map(
@@ -103,6 +118,7 @@ export function montarDisciplinas(notas: unknown, faltas: unknown): Disciplina[]
       parseNota(n["2 - Nota 2"]),
       parseNota(n["3 - Nota 3"]),
     ],
+    nota4: extrairNota4(n),
     mediaFinal: parseNota(n["6 - Média Final"] ?? n["4 - Média Final"]),
     faltas: Math.trunc(
       parseNota(faltasPorTurma.get(txt(n.IDTURMADISC))?.["1 - Faltas Sala de Aula"]) ?? 0,

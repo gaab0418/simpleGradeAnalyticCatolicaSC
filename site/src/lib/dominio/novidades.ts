@@ -11,11 +11,15 @@ export function notasNovas(antes: Historico, depois: Historico): string[] {
     for (const d of s.disciplinas) {
       const a = porChave.get(d.chave);
       if (!a) continue;
+      const nome = nomeMateria(d.nome).nome;
       d.notas.forEach((nota, i) => {
         if (a.notas[i] === null && nota !== null) {
-          out.push(`N${i + 1} de ${nomeMateria(d.nome).nome}: ${fmt(nota)}`);
+          out.push(`N${i + 1} de ${nome}: ${fmt(nota)}`);
         }
       });
+      if (a.nota4 == null && d.nota4 != null) {
+        out.push(`N4 de ${nome}: ${fmt(d.nota4)}`);
+      }
     }
   }
   return out;

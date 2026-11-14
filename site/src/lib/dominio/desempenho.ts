@@ -83,7 +83,7 @@ export function calcularDesempenho(h: Historico, top = 3): Desempenho {
     : null;
 
   const mediaPorEtapa = [0, 1, 2].map((i) =>
-    media(todas.map((a) => a.disciplina.notas[i]).filter((n): n is number => n !== null)),
+    media(todas.map((a) => a.notasEfetivas[i]).filter((n): n is number => n !== null)),
   );
 
   const entre = (de: number, ate: number) => medias.filter((m) => m >= de && m < ate).length;

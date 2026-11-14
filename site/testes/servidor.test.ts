@@ -6,12 +6,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import {
   dentroDoLimite,
   dentroDoLimiteConta,
+  extrairPular,
   lerCorpo,
   limparTentativas,
   mesmaOrigem,
 } from "@/lib/servidor/protecao";
 import { abrir, podeLembrar, selar } from "@/lib/servidor/sessao";
-import { ErroPortal, SessaoPortal, parseNota } from "@/lib/servidor/totvs";
+import { ErroPortal, SessaoPortal, extrairNota4, montarDisciplinas, parseNota } from "@/lib/servidor/totvs";
 
 const USUARIO = "aluno";
 const SENHA = 's3nh@ "com" espaço';
@@ -212,6 +213,34 @@ describe("cliente do portal", () => {
     expect(parseNota("")).toBeNull();
     expect(parseNota(null)).toBeNull();
   });
+
+  it("extrai N4 de 4 - Nota 4 ou coluna 4 alternativa, ignorando 4 - Média Final", () => {
+    expect(extrairNota4({ "4 - Nota 4": "<font color=red>5,5</font>" })).toBe(5.5);
+    expect(extrairNota4({ "4 - Substitutiva": "7,0" })).toBe(7);
+    expect(extrairNota4({ "4 - Média Final": "8,0" })).toBeNull();
+    expect(extrairNota4({ "4 - Nota 4": null, "4 - Média Final": "8,0" })).toBeNull();
+
+    const [d] = montarDisciplinas(
+      [
+        {
+          IDTURMADISC: 10,
+          CODTURMA: "T1",
+          CODDISC: "PES",
+          DISCIPLINA: "PROBABILIDADE - PES",
+          SITUACAO: "Aprovado",
+          "1 - Nota 1": "<font color=red>3,5</font>",
+          "2 - Nota 2": "6,8",
+          "3 - Nota 3": "7,0",
+          "4 - Nota 4": "5,5",
+          "6 - Média Final": "6,4",
+        },
+      ],
+      [],
+    );
+    expect(d.notas).toEqual([3.5, 6.8, 7]);
+    expect(d.nota4).toBe(5.5);
+    expect(d.mediaFinal).toBe(6.4);
+  });
 });
 
 describe("cookie de sessão", () => {
@@ -332,5 +361,25 @@ describe("proteções das rotas", () => {
       body: JSON.stringify({ usuario: "aluno" }),
     });
     expect(await lerCorpo(valido, 4096)).toEqual({ usuario: "aluno" });
+  });
+
+  it("extrairPular valida formato, tamanho e limite de 40 períodos", () => {
+    expect([...extrairPular(null)]).toEqual([]);
+    expect([...extrairPular({ pular: "202511" })]).toEqual([]);
+    expect([
+      ...extrairPular({
+        pular: [
+          "202511",
+          "2025-2_A",
+          "../invalido",
+          "muito-longo-demais-12345",
+          123,
+          null,
+        ],
+      }),
+    ]).toEqual(["202511", "2025-2_A"]);
+
+    const muitos = Array.from({ length: 50 }, (_, i) => `2025${String(i).padStart(2, "0")}`);
+    expect(extrairPular({ pular: muitos }).size).toBe(40);
   });
 });

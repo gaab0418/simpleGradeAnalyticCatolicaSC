@@ -15,6 +15,8 @@ export interface Disciplina {
   situacao: string;
   /** N1, N2 e N3; `null` = ainda não lançada. */
   notas: [number | null, number | null, number | null];
+  /** N4 (substitutiva/recuperação); `null` ou ausente = não lançada. */
+  nota4?: number | null;
   mediaFinal: number | null;
   faltas: number;
 }

@@ -32,7 +32,7 @@ dos dois lados cobrem os mesmos casos.
 | Garantida / Aprovada | Soma ≥ 18 (média 6), ou o portal já marcou como aprovada |
 | Tranquila | Precisa de média até 5,0 no que falta |
 | Atenção | Precisa de 5,1 a 7,0 |
-| Apertada | Precisa de 7,1 a 8,5 |
+| Em Risco | Precisa de 7,1 a 8,5 |
 | Crítica | Precisa de 8,6 a 10,0 |
 | Fora de alcance | Nem com 10 fecha média 6 |
 | Limite de faltas | 16 a 20 faltas |

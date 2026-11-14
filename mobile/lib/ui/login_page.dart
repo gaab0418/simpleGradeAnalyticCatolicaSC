@@ -2,7 +2,9 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/theme.dart';
+import '../domain/regras.dart';
 import '../state/app_controller.dart';
+import 'widgets/componentes.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage(this.app, {super.key});
@@ -50,13 +52,8 @@ class _LoginPageState extends State<LoginPage> {
     final c = Paleta.of(context);
     final ocupado = widget.app.sincronizando;
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Form(
-            key: _form,
+    final formulario = Form(
+      key: _form,
             child: AutofillGroup(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,30 +182,321 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.shield_outlined, size: 18, color: c.texto2),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'O app fala direto com portal.catolicasc.org.br. '
-                          'Sua senha não passa por nenhum outro servidor.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: c.texto2,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
-          ),
+    );
+
+    const painelDireito = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _PreviaEntrada(),
+        SizedBox(height: 14),
+        _SegurancaEntrada(),
+      ],
+    );
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 720) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: formulario,
+                  ),
+                  const SizedBox(width: 28),
+                  const Expanded(child: painelDireito),
+                ],
+              );
+            }
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  formulario,
+                  const SizedBox(height: 24),
+                  painelDireito,
+                ],
+              ),
+            );
+          },
         ),
       ),
+    );
+  }
+}
+
+class _PreviaEntrada extends StatelessWidget {
+  const _PreviaEntrada();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    final corLimite = c.tons[Tom.apertado]!.cor;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: c.superficie,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Compiladores',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: c.texto,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'CMP · Exemplo de cálculo automático',
+                      style: TextStyle(fontSize: 12, color: c.texto2),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Selo('Limite de faltas', tom: Tom.apertado),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _CelulaPrevia(
+                  rotulo: 'N1',
+                  child: Text(
+                    '3,5',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: c.texto,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ),
+              const Expanded(
+                child: _CelulaPrevia(
+                  rotulo: 'N2',
+                  child: NotaPendenteBadge(7.3),
+                ),
+              ),
+              const Expanded(
+                child: _CelulaPrevia(
+                  rotulo: 'N3',
+                  child: NotaPendenteBadge(7.3),
+                ),
+              ),
+              Expanded(
+                child: _CelulaPrevia(
+                  rotulo: 'Soma',
+                  child: Text.rich(
+                    TextSpan(
+                      text: '3,5',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: c.texto,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                      children: [
+                        TextSpan(
+                          text: '/18',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: c.texto3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(height: 1, color: c.borda),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const BarraDeFaltas(17),
+                Text(
+                  'resta 1 dia',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: corLimite,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CelulaPrevia extends StatelessWidget {
+  const _CelulaPrevia({required this.rotulo, required this.child});
+
+  final String rotulo;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          rotulo,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: c.texto3,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 26,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(fit: BoxFit.scaleDown, child: child),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SegurancaEntrada extends StatelessWidget {
+  const _SegurancaEntrada();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: c.superficie2.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.verified_user_outlined, size: 18, color: c.acento),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Seus dados ficam com você',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: c.texto,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const _PontoSeguranca(
+            titulo: 'Conexão direta com o portal',
+            texto:
+                'O app fala direto com portal.catolicasc.org.br. Sua senha não passa por nenhum outro servidor.',
+          ),
+          const SizedBox(height: 8),
+          const _PontoSeguranca(
+            titulo: 'Armazenamento local e opcional',
+            texto:
+                'Notas e faltas ficam só no seu aparelho. A senha só é salva no cofre do sistema se você ativar.',
+          ),
+          const SizedBox(height: 8),
+          const _PontoSeguranca(
+            titulo: 'Consulta apenas de leitura',
+            texto:
+                'O aplicativo só lê seu boletim acadêmico e nunca envia alterações para a instituição.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PontoSeguranca extends StatelessWidget {
+  const _PontoSeguranca({required this.titulo, required this.texto});
+
+  final String titulo;
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 5),
+          child: Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(color: c.acento, shape: BoxShape.circle),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              text: '$titulo: ',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: c.texto,
+                height: 1.4,
+              ),
+              children: [
+                TextSpan(
+                  text: texto,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w400,
+                    color: c.texto2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

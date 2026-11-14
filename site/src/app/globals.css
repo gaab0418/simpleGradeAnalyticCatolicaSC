@@ -273,6 +273,7 @@ select {
   width: 22px;
   height: 22px;
   flex: none;
+  color: var(--acento);
 }
 .abas {
   display: inline-flex;
@@ -643,10 +644,11 @@ main {
   height: 14px;
   flex: none;
   color: var(--texto-3);
+  transform: rotate(-90deg);
   transition: transform 0.18s ease;
 }
 .materia[aria-expanded="true"] svg {
-  transform: rotate(90deg);
+  transform: rotate(0deg);
   color: var(--acento);
 }
 .materia strong {
@@ -694,6 +696,63 @@ main {
   color: var(--critico);
   background: var(--critico-fundo);
   border-color: color-mix(in srgb, var(--critico) 35%, transparent);
+}
+.celula-n4 {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 6px 2px 20px;
+}
+.nota-sob-n4 {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--texto-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.bloco-n4 {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 5px 9px 3px;
+  border-radius: 7px;
+  background: var(--superficie);
+  border: 1px solid color-mix(in srgb, var(--acento) 40%, var(--borda));
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+  z-index: 1;
+}
+.selo-n4 {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--acento);
+  color: var(--acento-texto);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+}
+.selo-n4 svg {
+  width: 9px;
+  height: 9px;
+  flex: none;
 }
 @keyframes revelarNota {
   from {
@@ -842,6 +901,39 @@ main {
 .atalho:hover {
   color: var(--texto);
   border-color: var(--texto-3);
+}
+.atalho.ativo {
+  background: var(--acento-suave);
+  border-color: var(--acento);
+  color: var(--acento);
+}
+.sim-n4 {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--borda);
+  display: grid;
+  gap: 8px;
+}
+.sim-n4-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sim-n4-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--texto-2);
+}
+.sim-n4-titulo svg {
+  width: 14px;
+  height: 14px;
+  color: var(--acento);
+  flex: none;
 }
 .controle {
   display: grid;
@@ -1002,92 +1094,13 @@ input[type="range"] {
   display: grid;
   gap: 6px;
 }
-.grafico-status {
-  min-height: 20px;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.grafico {
-  display: block;
+.painel-grafico {
+  position: relative;
   width: 100%;
-  overflow: visible;
+  height: 232px;
 }
-.grafico text {
-  font-family: inherit;
-  font-size: 12px;
-  fill: var(--texto-2);
-  font-variant-numeric: tabular-nums;
-}
-.grafico text.eixo-txt {
-  font-size: 11px;
-  fill: var(--texto-3);
-}
-.grafico text.valor {
-  fill: var(--texto);
-  font-weight: 600;
-}
-.grafico text.valor.ativo {
-  fill: var(--acento);
-}
-.grafico .grade-linha {
-  stroke: var(--borda);
-  stroke-dasharray: 2 3;
-}
-.grafico .eixo {
-  stroke: var(--borda-forte);
-}
-.grafico .guia {
-  stroke: var(--borda-forte);
-  stroke-width: 1;
-}
-.grafico .area {
-  fill: var(--acento);
-  fill-opacity: 0.08;
-}
-.grafico .linha {
-  fill: none;
-  stroke: var(--acento);
-  stroke-width: 2.25;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-.grafico .linha.parcial {
-  stroke-dasharray: 5 4;
-}
-.grafico .alvo-ponto {
-  cursor: pointer;
-  outline: none;
-}
-.grafico .ponto {
-  fill: var(--acento);
-  stroke: var(--superficie);
-  stroke-width: 2;
-  transition: r 0.12s;
-}
-.grafico .ponto.parcial {
-  fill: var(--superficie);
-  stroke: var(--acento);
-}
-.grafico .ponto.ativo {
-  stroke-width: 2.5;
-}
-.grafico .coluna {
-  fill: var(--acento);
-  transition: opacity 0.12s;
-}
-.grafico .alvo-coluna:hover .coluna,
-.grafico .coluna.ativa {
-  opacity: 0.85;
-}
-.grafico .referencia {
-  stroke: var(--critico);
-  stroke-width: 1.25;
-  stroke-dasharray: 4 4;
-}
-.grafico text.ref {
-  fill: var(--critico);
-  font-size: 11px;
-  font-weight: 500;
+.painel-grafico.colunas {
+  height: 196px;
 }
 .legenda {
   margin-top: 8px;
@@ -1468,6 +1481,13 @@ footer a {
   }
   .detalhe td {
     padding: 0 16px 16px !important;
+  }
+  .celula-n4 {
+    padding: 7px 6px 1px 16px;
+  }
+  .bloco-n4 {
+    min-width: 38px;
+    padding: 3px 7px 2px;
   }
 }
 

@@ -53,7 +53,7 @@ class _BoletimAppState extends State<BoletimApp> with WidgetsBindingObserver {
           Fase.iniciando => const _Tela(
             child: Center(child: CircularProgressIndicator()),
           ),
-          Fase.deslogado => _Tela(child: LoginPage(app)),
+          Fase.deslogado => _Tela(larguraMaxima: 960, child: LoginPage(app)),
           Fase.bloqueado => _Tela(child: _Bloqueio(app)),
           Fase.pronto => _Inicio(app),
         },
@@ -62,20 +62,69 @@ class _BoletimAppState extends State<BoletimApp> with WidgetsBindingObserver {
   }
 }
 
+/// Grade editorial sutil (24px) sobre o fundo neutro, espelhando `globals.css`.
+class FundoGradeEditorial extends StatelessWidget {
+  const FundoGradeEditorial({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    final escuro = Theme.of(context).brightness == Brightness.dark;
+    final corLinha = escuro
+        ? const Color.fromRGBO(255, 255, 255, 0.025)
+        : const Color.fromRGBO(24, 34, 56, 0.028);
+    return Material(
+      color: c.fundo,
+      child: CustomPaint(
+        painter: _GradeEditorialPainter(corLinha),
+        child: SizedBox.expand(child: child),
+      ),
+    );
+  }
+}
+
+class _GradeEditorialPainter extends CustomPainter {
+  const _GradeEditorialPainter(this.corLinha);
+  final Color corLinha;
+
+  static const double _passo = 24;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = corLinha
+      ..strokeWidth = 1;
+    for (double x = 0; x <= size.width; x += _passo) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y <= size.height; y += _passo) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GradeEditorialPainter oldDelegate) =>
+      oldDelegate.corLinha != corLinha;
+}
+
 class _Tela extends StatelessWidget {
-  const _Tela({required this.child, this.barra});
+  const _Tela({required this.child, this.barra, this.larguraMaxima = 640});
   final Widget child;
   final Widget? barra;
+  final double larguraMaxima;
 
   @override
   Widget build(BuildContext context) => Scaffold(
     bottomNavigationBar: barra,
-    body: SafeArea(
-      child: Center(
-        // Em tablet o conteudo nao estica alem de uma coluna confortavel.
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: child,
+    body: FundoGradeEditorial(
+      child: SafeArea(
+        child: Center(
+          // Em tablet o conteudo nao estica alem de uma coluna confortavel.
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: larguraMaxima),
+            child: child,
+          ),
         ),
       ),
     ),

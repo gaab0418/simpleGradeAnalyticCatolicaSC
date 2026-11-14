@@ -4,6 +4,7 @@ import {
   campoTexto,
   dentroDoLimite,
   dentroDoLimiteConta,
+  extrairPular,
   lerCorpo,
   mesmaOrigem,
 } from "@/lib/servidor/protecao";
@@ -45,13 +46,7 @@ export async function POST(req: Request) {
       { status: 401, headers: SEM_CACHE },
     );
   }
-  const pular = new Set(
-    Array.isArray(corpo?.pular)
-      ? corpo.pular
-          .filter((p): p is string => typeof p === "string" && p.length <= 20 && /^[A-Za-z0-9_-]+$/.test(p))
-          .slice(0, 40)
-      : [],
-  );
+  const pular = extrairPular(corpo);
 
   try {
     return Response.json(await baixarBoletim(credenciais, pular), { headers: SEM_CACHE });

@@ -4,6 +4,7 @@ import {
   campoTexto,
   dentroDoLimite,
   dentroDoLimiteConta,
+  extrairPular,
   lerCorpo,
   mesmaOrigem,
 } from "@/lib/servidor/protecao";
@@ -34,8 +35,10 @@ export async function POST(req: Request) {
     );
   }
 
+  const pular = extrairPular(corpo);
+
   try {
-    const dados = await baixarBoletim({ usuario, senha });
+    const dados = await baixarBoletim({ usuario, senha }, pular);
     const selo = corpo?.lembrar === true ? selar({ usuario, senha }) : null;
     const jar = await cookies();
     if (selo) jar.set(COOKIE_SESSAO, selo, { ...opcoesCookie, maxAge: VALIDADE_SEGUNDOS });

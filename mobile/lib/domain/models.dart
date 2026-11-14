@@ -27,6 +27,7 @@ class Disciplina {
     required this.nomeBruto,
     required this.situacao,
     required this.notas,
+    this.nota4,
     this.mediaParcial,
     this.mediaFinal,
     this.faltas = 0,
@@ -45,6 +46,9 @@ class Disciplina {
 
   /// N1, N2 e N3; `null` = ainda nao lancada.
   final List<double?> notas;
+
+  /// N4 (recuperacao/substitutiva); `null` = nao lancada.
+  final double? nota4;
   final double? mediaParcial;
   final double? mediaFinal;
   final int faltas;
@@ -59,6 +63,7 @@ class Disciplina {
       for (var i = 0; i < 3; i++)
         _num((j['notas'] as List?)?.elementAtOrNull(i)),
     ],
+    nota4: _num(j['nota4']),
     mediaParcial: _num(j['mediaParcial']),
     mediaFinal: _num(j['mediaFinal']),
     faltas: (j['faltas'] as num?)?.toInt() ?? 0,
@@ -71,6 +76,7 @@ class Disciplina {
     'nome': nomeBruto,
     'situacao': situacao,
     'notas': notas,
+    'nota4': nota4,
     'mediaParcial': mediaParcial,
     'mediaFinal': mediaFinal,
     'faltas': faltas,

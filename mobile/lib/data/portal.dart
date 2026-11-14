@@ -86,6 +86,23 @@ Aluno alunoDoJson(Object? data) {
   );
 }
 
+final _chaveNota4 = RegExp(r'^4\s*-\s*(?!m[eé]dia)', caseSensitive: false);
+
+double? _extrairNota4(Map n) {
+  if (n.containsKey('4 - Nota 4')) {
+    final direta = parseNota(n['4 - Nota 4']);
+    if (direta != null) return direta;
+  }
+  for (final entry in n.entries) {
+    final k = entry.key?.toString() ?? '';
+    if (_chaveNota4.hasMatch(k)) {
+      final v = parseNota(entry.value);
+      if (v != null) return v;
+    }
+  }
+  return null;
+}
+
 /// Cruza NotaEtapa com FaltaEtapa por IDTURMADISC.
 List<Disciplina> disciplinasDoJson(List notas, List faltas) {
   final faltasPorTurma = <String, Map>{
@@ -105,6 +122,7 @@ List<Disciplina> disciplinasDoJson(List notas, List faltas) {
           parseNota(n['2 - Nota 2']),
           parseNota(n['3 - Nota 3']),
         ],
+        nota4: _extrairNota4(n),
         mediaParcial: parseNota(n['5 - Média Parcial']),
         mediaFinal: parseNota(n['6 - Média Final'] ?? n['4 - Média Final']),
         faltas:

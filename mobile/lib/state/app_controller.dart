@@ -113,11 +113,22 @@ class AppController extends ChangeNotifier {
       erro = null;
     });
     try {
-      final h = await _baixar(c, anterior: null, completo: true);
+      final passados = await _local.lerSemestresPassados(c.usuario);
+      final base = passados.isEmpty
+          ? null
+          : Historico(
+              aluno: const Aluno(nome: '', ra: '', curso: ''),
+              semestres: passados,
+            );
+      final h = await _baixar(c, base: base, completo: false);
       _persistir = lembrar;
       if (lembrar) {
         await _cofre.salvar(c);
         await _local.salvarHistorico(h);
+        await _local.salvarSemestresPassados(
+          c.usuario,
+          h.semestres.where((s) => semestreConsolidado(s, _agora())),
+        );
       }
       _credenciais = c;
       _mudar(() {
@@ -168,8 +179,24 @@ class AppController extends ChangeNotifier {
     });
     try {
       final anterior = historico;
-      final h = await _baixar(c, anterior: anterior, completo: completo);
-      if (_persistir) await _local.salvarHistorico(h);
+      var base = anterior;
+      if (base == null && !completo) {
+        final passados = await _local.lerSemestresPassados(c.usuario);
+        if (passados.isNotEmpty) {
+          base = Historico(
+            aluno: const Aluno(nome: '', ra: '', curso: ''),
+            semestres: passados,
+          );
+        }
+      }
+      final h = await _baixar(c, base: base, completo: completo);
+      if (_persistir) {
+        await _local.salvarHistorico(h);
+        await _local.salvarSemestresPassados(
+          c.usuario,
+          h.semestres.where((s) => semestreConsolidado(s, _agora())),
+        );
+      }
       _mudar(() {
         novidades = anterior == null ? const [] : _notasNovas(anterior, h);
         historico = h;
@@ -201,7 +228,7 @@ class AppController extends ChangeNotifier {
 
   Future<Historico> _baixar(
     Credenciais c, {
-    required Historico? anterior,
+    required Historico? base,
     required bool completo,
   }) async {
     final sessao = await _portal.entrar(c);
@@ -219,8 +246,10 @@ class AppController extends ChangeNotifier {
       }
       final semestres = <Semestre>[];
       for (final MapEntry(key: codigo, value: ctxs) in porPeriodo.entries) {
-        final guardado = anterior?.semestre(codigo);
-        if (!completo && guardado != null && semestreEncerrado(guardado)) {
+        final guardado = base?.semestre(codigo);
+        if (!completo &&
+            guardado != null &&
+            semestreConsolidado(guardado, _agora())) {
           semestres.add(guardado);
           continue;
         }
@@ -257,13 +286,16 @@ class AppController extends ChangeNotifier {
       for (final d in s.disciplinas) {
         final a = antigas[d.chave];
         if (a == null) continue;
+        final nome = nomeMateria(d.nomeBruto).nome;
         for (var i = 0; i < 3; i++) {
           final nota = d.notas[i];
           if (a.notas[i] == null && nota != null) {
-            out.add(
-              'N${i + 1} de ${nomeMateria(d.nomeBruto).nome}: ${fmt(nota)}',
-            );
+            out.add('N${i + 1} de $nome: ${fmt(nota)}');
           }
+        }
+        final n4 = d.nota4;
+        if (a.nota4 == null && n4 != null) {
+          out.add('N4 de $nome: ${fmt(n4)}');
         }
       }
     }
