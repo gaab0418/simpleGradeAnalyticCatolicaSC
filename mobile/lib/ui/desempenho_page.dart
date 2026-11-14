@@ -23,10 +23,25 @@ class DesempenhoPage extends StatelessWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(
-            'A análise aparece quando houver pelo menos uma matéria com as três notas lançadas.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: c.texto2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Sem notas suficientes ainda',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: c.texto,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'A análise aparece quando houver pelo menos uma matéria com as três notas lançadas.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: c.texto2),
+              ),
+            ],
           ),
         ),
       );
@@ -36,84 +51,130 @@ class DesempenhoPage extends StatelessWidget {
     final t = d.tendencia;
     final melhores = d.melhores();
     final piores = d.piores();
+    final tomTendencia = t == null
+        ? null
+        : c.tons[t >= 0 ? Tom.ok : Tom.critico]!;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        Text(
+        const Text(
           'Desempenho no curso',
-          style: TextStyle(fontSize: 14, color: c.texto2),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
         ),
-        const SizedBox(height: 4),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              fmt(media),
-              style: const TextStyle(
-                fontSize: 44,
-                height: 1,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -1,
+        const SizedBox(height: 2),
+        Text(
+          'Calculado com as ${d.concluidas.length} matérias que já têm resultado definitivo.',
+          style: TextStyle(fontSize: 13.5, color: c.texto2),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: c.superficie,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: c.borda),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Média geral',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: c.texto2,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'média geral',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    fmt(media),
+                    style: const TextStyle(
+                      fontSize: 44,
+                      height: 1,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -1,
+                      fontFeatures: [FontFeature.tabularFigures()],
                     ),
-                    if (t != null)
-                      Row(
+                  ),
+                  if (t != null && tomTendencia != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tomTendencia.fundo,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(6),
+                          topRight: Radius.circular(11),
+                          bottomRight: Radius.circular(6),
+                          bottomLeft: Radius.circular(11),
+                        ),
+                        border: Border.all(
+                          color: tomTendencia.cor.withValues(alpha: 0.28),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             t >= 0 ? Icons.north_east : Icons.south_east,
-                            size: 15,
-                            color: c.texto2,
+                            size: 14,
+                            color: tomTendencia.cor,
                           ),
                           const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              '${t >= 0 ? '+' : '−'}${fmt(t.abs())} no último semestre',
-                              style: TextStyle(fontSize: 13, color: c.texto2),
+                          Text(
+                            '${t >= 0 ? '+' : '−'}${fmt(t.abs())} no último semestre',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: tomTendencia.cor,
                             ),
                           ),
                         ],
                       ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _Numero(
+                        '${(d.taxaAprovacao! * 100).round()}%',
+                        'Aprovação',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _Numero(
+                        '${d.concluidas.length}',
+                        'Matérias concluídas',
+                        subtitulo: '${d.aprovadas} aprovadas',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _Numero(
+                        '${d.faltasTotais}',
+                        'Faltas no curso',
+                        subtitulo:
+                            '${d.faltasTotais == 1 ? 'aula' : 'aulas'} · ${dias(d.faltasTotais)}',
+                      ),
+                    ),
                   ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: _Numero(
-                  '${(d.taxaAprovacao! * 100).round()}%',
-                  'de aprovação',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Numero('${d.concluidas.length}', 'matérias concluídas'),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Numero(
-                  dias(d.faltasTotais).split(' ').first,
-                  'dias de falta',
                 ),
               ),
             ],
@@ -159,7 +220,7 @@ class DesempenhoPage extends StatelessWidget {
         ],
         if (d.evolucao.length >= 2) ...[
           Painel(
-            titulo: 'Evolução da média',
+            titulo: 'Média por semestre',
             legenda: 'Média das matérias em cada semestre. Tracejado: mínimo para aprovar (6).',
             child: _GraficoEvolucao(d.evolucao),
           ),
@@ -167,27 +228,28 @@ class DesempenhoPage extends StatelessWidget {
         ],
         if (d.mediaPorEtapa.every((v) => v != null)) ...[
           Painel(
-            titulo: 'Ritmo dentro do semestre',
-            legenda: 'Sua nota média em cada prova, somando todo o curso.',
+            titulo: 'Nota média em cada prova',
+            legenda: 'Ritmo dentro do semestre: sua média em N1, N2 e N3 ao longo do curso.',
             child: _GraficoBarras(
               valores: [for (final v in d.mediaPorEtapa) v!],
               rotulos: const ['N1', 'N2', 'N3'],
               maximo: notaMaxima,
+              referencia: notaMinimaAprovacao,
               descricao: (i, v) => 'Média ${fmt(v)} na N${i + 1}',
             ),
           ),
           const SizedBox(height: 12),
         ],
         Painel(
-          titulo: 'Como suas médias se distribuem',
-          legenda: 'Quantidade de matérias concluídas em cada faixa de média.',
+          titulo: 'Matérias por faixa de média',
+          legenda: 'Quantidade de matérias concluídas em cada faixa de nota.',
           child: _Distribuicao(d.distribuicao),
         ),
         const SizedBox(height: 12),
         if (d.semestres.length >= 2 && d.faltasTotais > 0) ...[
           Painel(
-            titulo: 'Faltas por semestre',
-            legenda: 'Total de aulas perdidas, somando todas as matérias.',
+            titulo: 'Faltas por semestre (aulas)',
+            legenda: 'Total de aulas perdidas, somando todas as matérias do período.',
             child: _GraficoBarras(
               valores: [for (final s in d.semestres) s.faltas.toDouble()],
               rotulos: [for (final s in d.semestres) _curto(s.rotulo)],
@@ -198,10 +260,10 @@ class DesempenhoPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        Painel(titulo: 'Onde você brilha', child: _Ranking(melhores)),
+        Painel(titulo: 'Maiores médias', child: _Ranking(melhores)),
         if (piores.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Painel(titulo: 'Onde foi mais difícil', child: _Ranking(piores)),
+          Painel(titulo: 'Menores médias', child: _Ranking(piores)),
         ],
       ],
     );
@@ -215,33 +277,55 @@ String _curto(String rotulo) =>
 TextStyle _eixo(Paleta c) => TextStyle(fontSize: 11, color: c.texto2);
 
 class _Numero extends StatelessWidget {
-  const _Numero(this.valor, this.rotulo);
+  const _Numero(this.valor, this.rotulo, {this.subtitulo});
   final String valor;
   final String rotulo;
+  final String? subtitulo;
 
   @override
   Widget build(BuildContext context) {
     final c = Paleta.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: c.superficie2.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            rotulo,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11.5, color: c.texto2, height: 1.25),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
               valor,
-              style: const TextStyle(
-                fontSize: 24,
+              style: TextStyle(
+                fontSize: 22,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.5,
+                color: c.texto,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
+          ),
+          if (subtitulo != null) ...[
+            const SizedBox(height: 2),
             Text(
-              rotulo,
-              style: TextStyle(fontSize: 12, color: c.texto2, height: 1.25),
+              subtitulo!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: c.texto2),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -347,46 +431,96 @@ class _GraficoEvolucao extends StatelessWidget {
                     getTooltipColor: (_) => c.texto,
                     getTooltipItems: (spots) => [
                       for (final s in spots)
-                        LineTooltipItem(
-                          '${semestres[s.spotIndex].rotulo}\n',
-                          TextStyle(fontSize: 12, color: c.fundo),
-                          children: [
-                            TextSpan(
-                              text:
-                                  'média ${fmt(s.y)}${semestres[s.spotIndex].encerrado ? '' : ' (parcial)'}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
+                        if (emAndamento &&
+                            s.barIndex == 1 &&
+                            s.x.round() < medias.length - 1)
+                          null
+                        else
+                          LineTooltipItem(
+                            '${semestres[s.x.round()].rotulo}\n',
+                            TextStyle(fontSize: 12, color: c.fundo),
+                            children: [
+                              TextSpan(
+                                text:
+                                    'média ${fmt(s.y)}${semestres[s.x.round()].encerrado ? '' : ' (parcial)'}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                     ],
                   ),
                 ),
                 lineBarsData: [
                   LineChartBarData(
                     spots: [
-                      for (final (i, m) in medias.indexed)
-                        FlSpot(i.toDouble(), m),
+                      for (var i = 0;
+                          i < (emAndamento ? medias.length - 1 : medias.length);
+                          i++)
+                        FlSpot(i.toDouble(), medias[i]),
                     ],
                     color: c.acento,
                     barWidth: 2,
                     isStrokeCapRound: true,
-                    // O trecho ate um semestre em andamento e so estimativa.
-                    dashArray: null,
+                    belowBarData: BarAreaData(
+                      show: (emAndamento ? medias.length - 1 : medias.length) >=
+                          2,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          c.acento.withValues(alpha: 0.16),
+                          c.acento.withValues(alpha: 0.01),
+                        ],
+                      ),
+                    ),
                     dotData: FlDotData(
-                      getDotPainter: (spot, _, _, i) {
-                        final parcial = !semestres[i].encerrado;
-                        return FlDotCirclePainter(
-                          radius: 4.5,
-                          color: parcial ? c.superficie : c.acento,
-                          strokeWidth: 2,
-                          strokeColor: parcial ? c.acento : c.superficie,
-                        );
-                      },
+                      getDotPainter: (_, _, _, _) => FlDotCirclePainter(
+                        radius: 4.5,
+                        color: c.acento,
+                        strokeWidth: 2,
+                        strokeColor: c.superficie,
+                      ),
                     ),
                   ),
+                  if (emAndamento)
+                    // O trecho ate o semestre em andamento e uma estimativa tracejada.
+                    LineChartBarData(
+                      spots: [
+                        FlSpot(
+                          (medias.length - 2).toDouble(),
+                          medias[medias.length - 2],
+                        ),
+                        FlSpot((medias.length - 1).toDouble(), medias.last),
+                      ],
+                      color: c.acento,
+                      barWidth: 2,
+                      isStrokeCapRound: true,
+                      dashArray: [5, 4],
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            c.acento.withValues(alpha: 0.08),
+                            c.acento.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                      dotData: FlDotData(
+                        checkToShowDot: (spot, _) =>
+                            spot.x.round() == medias.length - 1,
+                        getDotPainter: (_, _, _, _) => FlDotCirclePainter(
+                          radius: 4.5,
+                          color: c.superficie,
+                          strokeWidth: 2,
+                          strokeColor: c.acento,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -409,7 +543,7 @@ class _GraficoEvolucao extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Semestre em andamento: média parcial das notas já lançadas.',
+                    'Ponto vazado e trecho tracejado: semestre em andamento (média parcial das notas já lançadas).',
                     style: TextStyle(fontSize: 12, color: c.texto2),
                   ),
                 ),
@@ -428,12 +562,14 @@ class _GraficoBarras extends StatelessWidget {
     required this.rotulos,
     required this.descricao,
     this.maximo,
+    this.referencia,
     this.inteiro = false,
   });
   final List<double> valores;
   final List<String> rotulos;
   final String Function(int i, double v) descricao;
   final double? maximo;
+  final double? referencia;
   final bool inteiro;
 
   @override
@@ -457,6 +593,29 @@ class _GraficoBarras extends StatelessWidget {
               border: Border(bottom: BorderSide(color: c.borda)),
             ),
             gridData: const FlGridData(show: false),
+            extraLinesData: referencia == null
+                ? null
+                : ExtraLinesData(
+                    horizontalLines: [
+                      HorizontalLine(
+                        y: referencia!,
+                        color: c.critico,
+                        strokeWidth: 1.5,
+                        dashArray: [5, 5],
+                        label: HorizontalLineLabel(
+                          show: true,
+                          alignment: Alignment.topRight,
+                          padding: const EdgeInsets.only(right: 4, bottom: 2),
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: c.critico,
+                          ),
+                          labelResolver: (_) => fmt(referencia!),
+                        ),
+                      ),
+                    ],
+                  ),
             titlesData: FlTitlesData(
               leftTitles: const AxisTitles(),
               rightTitles: const AxisTitles(),
@@ -598,35 +757,51 @@ class _Ranking extends StatelessWidget {
       children: [
         for (final m in materias)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        m.nome,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            m.nome,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            m.periodo,
+                            style: TextStyle(fontSize: 12, color: c.texto2),
+                          ),
+                        ],
                       ),
-                      Text(
-                        m.periodo,
-                        style: TextStyle(fontSize: 12, color: c.texto2),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      fmt(m.media),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: m.media < notaMinimaAprovacao
+                            ? c.critico
+                            : c.texto,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  fmt(m.media),
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: m.media < notaMinimaAprovacao ? c.critico : c.texto,
-                  ),
+                const SizedBox(height: 6),
+                LinearProgressIndicator(
+                  value: (m.media / notaMaxima).clamp(0.0, 1.0),
+                  minHeight: 5,
+                  borderRadius: BorderRadius.circular(3),
+                  backgroundColor: c.superficie2,
+                  color: m.media < notaMinimaAprovacao ? c.critico : c.acento,
                 ),
               ],
             ),

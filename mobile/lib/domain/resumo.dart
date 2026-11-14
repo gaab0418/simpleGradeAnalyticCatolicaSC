@@ -9,6 +9,7 @@ class ResumoBoletim {
     required this.manchete,
     required this.recado,
     required this.materias,
+    required this.garantidas,
     required this.semNota,
     required this.faltas,
   });
@@ -18,6 +19,7 @@ class ResumoBoletim {
   /// Anotacao "a caneta vermelha"; vazia quando nao ha o que destacar.
   final String recado;
   final int materias;
+  final int garantidas;
   final int semNota;
   final int faltas;
 }
@@ -43,23 +45,23 @@ ResumoBoletim resumir(List<Analise> materias) {
   var manchete = '';
   var recado = '';
   if (n == 0) {
-    manchete = 'Nada lançado neste semestre.';
+    manchete = 'Nada lançado neste semestre';
   } else if (encerrado) {
     final medias = materias
         .map((m) => m.disciplina.mediaFinal)
         .whereType<double>()
         .toList();
-    manchete = 'Semestre encerrado: $ok de $n aprovadas.';
+    manchete = 'Semestre encerrado: $ok de $n aprovadas';
     if (medias.isNotEmpty) {
       recado =
-          'média geral ${fmt(medias.reduce((a, b) => a + b) / medias.length)}';
+          'Média geral ${fmt(medias.reduce((a, b) => a + b) / medias.length)}.';
     }
   } else {
     manchete = ok == 0
-        ? 'Nenhuma das $n matérias está garantida ainda.'
+        ? 'Nenhuma das $n matérias garantida ainda'
         : ok == n
-        ? 'Todas as $n matérias garantidas.'
-        : '$ok de $n matérias já garantidas.';
+        ? 'Todas as $n matérias garantidas'
+        : '$ok de $n matérias garantidas';
     if (rf != null) {
       recado = '${nome(rf)} passou do limite de faltas.';
     } else if (foco != null) {
@@ -67,11 +69,10 @@ ResumoBoletim resumir(List<Analise> materias) {
       recado = precisa > notaMaxima
           ? '${nome(foco)}: nem com 10 fecha média 6. Vale conversar com o professor.'
           : foco.restantes == 1
-          ? 'Foco em ${nome(foco)}: precisa de ${fmt(precisa)} na última prova.'
-          : 'Foco em ${nome(foco)}: precisa de média ${fmt(precisa)} nas ${foco.restantes} provas que faltam.';
+          ? 'Prioridade: ${nome(foco)} precisa de ${fmt(precisa)} na última prova.'
+          : 'Prioridade: ${nome(foco)} precisa de média ${fmt(precisa)} nas ${foco.restantes} provas que faltam.';
     } else if (ok < n) {
-      recado =
-          'Tudo no ritmo: nenhuma matéria pede mais que média 5 no que falta.';
+      recado = 'Nenhuma matéria pede mais que média 5 no que falta.';
     }
   }
 
@@ -79,6 +80,7 @@ ResumoBoletim resumir(List<Analise> materias) {
     manchete: manchete,
     recado: recado,
     materias: n,
+    garantidas: ok,
     semNota: materias.where((m) => m.situacao == Situacao.semNotas).length,
     faltas: materias.fold(0, (a, m) => a + m.faltas),
   );

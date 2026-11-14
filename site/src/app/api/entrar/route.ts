@@ -1,6 +1,13 @@
 import { cookies } from "next/headers";
 import { baixarBoletim, respostaDeErro, SEM_CACHE } from "@/lib/servidor/boletim";
-import { campoTexto, dentroDoLimite, lerCorpo, mesmaOrigem } from "@/lib/servidor/protecao";
+import {
+  campoTexto,
+  dentroDoLimite,
+  dentroDoLimiteConta,
+  extrairPular,
+  lerCorpo,
+  mesmaOrigem,
+} from "@/lib/servidor/protecao";
 import { COOKIE_SESSAO, VALIDADE_SEGUNDOS, opcoesCookie, selar } from "@/lib/servidor/sessao";
 
 export const maxDuration = 60;
@@ -21,9 +28,17 @@ export async function POST(req: Request) {
   if (!usuario || !senha) {
     return Response.json({ erro: "Informe usuário e senha." }, { status: 400, headers: SEM_CACHE });
   }
+  if (!dentroDoLimiteConta(usuario)) {
+    return Response.json(
+      { erro: "Muitas tentativas para esta conta. Espere alguns minutos e tente de novo.", tipo: "limite" },
+      { status: 429, headers: SEM_CACHE },
+    );
+  }
+
+  const pular = extrairPular(corpo);
 
   try {
-    const dados = await baixarBoletim({ usuario, senha });
+    const dados = await baixarBoletim({ usuario, senha }, pular);
     const selo = corpo?.lembrar === true ? selar({ usuario, senha }) : null;
     const jar = await cookies();
     if (selo) jar.set(COOKIE_SESSAO, selo, { ...opcoesCookie, maxAge: VALIDADE_SEGUNDOS });

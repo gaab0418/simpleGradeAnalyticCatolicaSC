@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Disciplina disc(
   List<double?> notas, {
+  double? nota4,
   int faltas = 0,
   String situacao = 'Matriculado',
   double? mediaFinal,
@@ -20,6 +21,7 @@ Disciplina disc(
   nomeBruto: nome,
   situacao: situacao,
   notas: notas,
+  nota4: nota4,
   mediaFinal: mediaFinal,
   faltas: faltas,
 );
@@ -92,6 +94,81 @@ void main() {
       expect(simular(a, [6, 6]).passa, isTrue);
       expect(simular(a, [5, 6]).faltariam, 1);
     });
+
+    test('aplicarNota4 substitui a menor nota inclusive nula quando N4 >= menor', () {
+      final r1 = aplicarNota4([3.5, 6.8, 7.0], 5.5);
+      expect(r1.notasEfetivas, [5.5, 6.8, 7.0]);
+      expect(r1.indiceSubstituido, 0);
+      expect(r1.notaSubstituida, 3.5);
+
+      final r2 = aplicarNota4([6.0, null, 7.0], 5.0);
+      expect(r2.notasEfetivas, [6.0, 5.0, 7.0]);
+      expect(r2.indiceSubstituido, 1);
+      expect(r2.notaSubstituida, 0);
+
+      final r3 = aplicarNota4([5.0, 6.0, 7.0], 4.0);
+      expect(r3.notasEfetivas, [5.0, 6.0, 7.0]);
+      expect(r3.indiceSubstituido, isNull);
+    });
+
+    test('análise e simulação com N4', () {
+      final semN4 = analisar(disc([3.5, 6.8, 7.0]));
+      expect(semN4.situacao, Situacao.reprovada);
+      expect(semN4.precisaN4, 4.2);
+
+      final comN4 = analisar(disc([3.5, 6.8, 7.0], nota4: 5.5));
+      expect(comN4.notasEfetivas, [5.5, 6.8, 7.0]);
+      expect(comN4.indiceSubstituido, 0);
+      expect(comN4.notaSubstituida, 3.5);
+      expect(comN4.soma, closeTo(19.3, 1e-9));
+      expect(comN4.situacao, Situacao.garantida);
+
+      final simN4 = simular(semN4, const [], nota4: 5.5);
+      expect(simN4.notasEfetivas, [5.5, 6.8, 7.0]);
+      expect(simN4.indiceSubstituido, 0);
+      expect(simN4.passa, isTrue);
+    });
+
+    test('semestreConsolidado considera encerrado e anos anteriores', () {
+      final encerradoAtual = Semestre(
+        codigo: '202623',
+        curso: '',
+        situacaoMatricula: '',
+        atualizadoEm: DateTime(2026),
+        disciplinas: [disc([8, 8, 8], situacao: 'Aprovado', mediaFinal: 8)],
+      );
+      final abertoAtual = Semestre(
+        codigo: '202623',
+        curso: '',
+        situacaoMatricula: '',
+        atualizadoEm: DateTime(2026),
+        disciplinas: [disc([8, null, null])],
+      );
+      final abertoAnoAnterior = Semestre(
+        codigo: '202523',
+        curso: '',
+        situacaoMatricula: '',
+        atualizadoEm: DateTime(2025),
+        disciplinas: [disc([8, null, null])],
+      );
+      final vazio = Semestre(
+        codigo: '202511',
+        curso: '',
+        situacaoMatricula: '',
+        atualizadoEm: DateTime(2025),
+        disciplinas: const [],
+      );
+
+      final ref = DateTime(2026, 11, 12);
+      expect(semestreConsolidado(encerradoAtual, ref), isTrue);
+      expect(semestreConsolidado(abertoAtual, ref), isFalse);
+      expect(semestreConsolidado(abertoAnoAnterior, ref), isTrue);
+      expect(semestreConsolidado(vazio, ref), isFalse);
+    });
+
+    test('situação apertada usa rótulo Em Risco', () {
+      expect(Situacao.apertada.rotulo, 'Em Risco');
+    });
   });
 
   test('período padrão vira em 2 de agosto', () {
@@ -123,7 +200,7 @@ void main() {
       expect(parseNota(null), isNull);
     });
 
-    test('cruza notas com faltas por IDTURMADISC', () {
+    test('cruza notas com faltas por IDTURMADISC e extrai Nota 4', () {
       final ds = disciplinasDoJson(
         [
           {
@@ -135,6 +212,31 @@ void main() {
             '1 - Nota 1': '<font color=red>4,0</font>',
             '2 - Nota 2': '7,5',
             '3 - Nota 3': null,
+            '4 - Nota 4': '6,5',
+            '4 - Média Parcial': '5,8',
+          },
+          {
+            'IDTURMADISC': 78,
+            'CODTURMA': 'T',
+            'CODDISC': 'X2',
+            'DISCIPLINA': 'BANCO - BD',
+            'SITUACAO': 'Matriculado',
+            '1 - Nota 1': '3,0',
+            '2 - Nota 2': '6,0',
+            '3 - Nota 3': '6,0',
+            '4 - Recuperação': '7,0',
+            '4 - Média': '5,0',
+          },
+          {
+            'IDTURMADISC': 79,
+            'CODTURMA': 'T',
+            'CODDISC': 'X3',
+            'DISCIPLINA': 'ESTRUTURAS - ED',
+            'SITUACAO': 'Aprovado',
+            '1 - Nota 1': '3,0',
+            '2 - Nota 2': '7,0',
+            '3 - Nota 3': '7,0',
+            '4 - Nota Substitutiva': '8,4',
           },
         ],
         [
@@ -142,13 +244,16 @@ void main() {
           {'IDTURMADISC': 99, '1 - Faltas Sala de Aula': '20'},
         ],
       );
-      expect(ds.single.notas, [4.0, 7.5, null]);
-      expect(ds.single.faltas, 8);
-      expect(ds.single.chave, '77');
+      expect(ds.first.notas, [4.0, 7.5, null]);
+      expect(ds.first.nota4, 6.5);
+      expect(ds.first.faltas, 8);
+      expect(ds.first.chave, '77');
+      expect(ds[1].nota4, 7.0);
+      expect(ds[2].nota4, 8.4);
     });
   });
 
-  test('histórico sobrevive a ida e volta em JSON', () {
+  test('histórico sobrevive a ida e volta em JSON incluindo nota4', () {
     final h = historicoDemo(DateTime(2026, 11, 12));
     final volta = Historico.fromJson(h.toJson());
     expect(volta.semestres.length, h.semestres.length);
@@ -157,6 +262,11 @@ void main() {
       volta.semestre('202623')!.disciplinas.first.notas,
       h.semestre('202623')!.disciplinas.first.notas,
     );
+    final pesVolta = volta
+        .semestre('202511')!
+        .disciplinas
+        .firstWhere((d) => d.codDisc == 'PES');
+    expect(pesVolta.nota4, 5.5);
   });
 
   group('com o histórico de demonstração', () {
@@ -164,7 +274,8 @@ void main() {
 
     test('resumo do semestre em andamento aponta o foco', () {
       final r = resumir(analisarSemestre(h.semestre('202623')!));
-      expect(r.manchete, '1 de 6 matérias já garantidas.');
+      expect(r.manchete, '1 de 6 matérias garantidas');
+      expect(r.garantidas, 1);
       expect(r.recado, contains('Empreendedorismo'));
       expect(r.recado, contains('nem com 10'));
       expect(r.semNota, 1);
@@ -172,8 +283,21 @@ void main() {
 
     test('resumo de semestre encerrado', () {
       final r = resumir(analisarSemestre(h.semestre('202411')!));
-      expect(r.manchete, 'Semestre encerrado: 4 de 5 aprovadas.');
-      expect(r.recado, startsWith('média geral'));
+      expect(r.manchete, 'Semestre encerrado: 4 de 5 aprovadas');
+      expect(r.recado, startsWith('Média geral'));
+    });
+
+    test('202511 PES usa N4 para aprovação', () {
+      final pes = h
+          .semestre('202511')!
+          .disciplinas
+          .firstWhere((d) => d.codDisc == 'PES');
+      expect(pes.notas, [3.5, 6.8, 7.0]);
+      expect(pes.nota4, 5.5);
+      final a = analisar(pes);
+      expect(a.notasEfetivas, [5.5, 6.8, 7.0]);
+      expect(a.situacao, Situacao.aprovada);
+      expect(a.media, 6.4);
     });
 
     test('desempenho no curso', () {

@@ -6,7 +6,9 @@ import { notasNovas } from "@/lib/dominio/novidades";
 import {
   analisar,
   analisarSemestre,
+  aplicarNota4,
   periodoPadrao,
+  semestreConsolidado,
   semestreEncerrado,
   simular,
 } from "@/lib/dominio/regras";
@@ -37,7 +39,9 @@ describe("situação da matéria", () => {
 
   it("faixas pela média que falta", () => {
     expect(analisar(disc([6, 6, null])).situacao.id).toBe("atencao");
-    expect(analisar(disc([5, 5, null])).situacao.id).toBe("apertada");
+    const emRisco = analisar(disc([5, 5, null]));
+    expect(emRisco.situacao.id).toBe("apertada");
+    expect(emRisco.situacao.rotulo).toBe("Em Risco");
     expect(analisar(disc([4.5, 4.5, null])).situacao.id).toBe("critica");
     expect(analisar(disc([2, 4.5, null])).situacao.id).toBe("foraDeAlcance");
     expect(analisar(disc([null, null, null])).situacao.id).toBe("semNotas");
@@ -61,6 +65,55 @@ describe("situação da matéria", () => {
     const a = analisar(disc([6, null, null]));
     expect(simular(a, [6, 6]).passa).toBe(true);
     expect(simular(a, [5, 6]).faltariam).toBe(1);
+
+    const comN4 = simular(a, [4, 6], 6);
+    expect(comN4.notasEfetivas).toEqual([6, 6, 6]);
+    expect(comN4.indiceSubstituido).toBe(1);
+    expect(comN4.notaSubstituida).toBe(4);
+    expect(comN4.nota4).toBe(6);
+    expect(comN4.soma).toBe(18);
+    expect(comN4.passa).toBe(true);
+
+    const todasLancadas = analisar(disc([3, 6, 6]));
+    const simRecuperacao = simular(todasLancadas, [], 6);
+    expect(simRecuperacao.notasEfetivas).toEqual([6, 6, 6]);
+    expect(simRecuperacao.indiceSubstituido).toBe(0);
+    expect(simRecuperacao.notaSubstituida).toBe(3);
+    expect(simRecuperacao.passa).toBe(true);
+  });
+
+  it("nota 4 (substitutiva): substitui menor nota e calcula precisaN4", () => {
+    expect(aplicarNota4([3.5, 6.8, 7.0], 5.5)).toEqual({
+      efetivas: [5.5, 6.8, 7.0],
+      indiceSubstituido: 0,
+      notaSubstituida: 3.5,
+    });
+    expect(aplicarNota4([7.0, 7.0, 7.0], 5.0)).toEqual({
+      efetivas: [7.0, 7.0, 7.0],
+      indiceSubstituido: null,
+      notaSubstituida: null,
+    });
+    expect(aplicarNota4([7.0, null, 8.0], 5.0)).toEqual({
+      efetivas: [7.0, 5.0, 8.0],
+      indiceSubstituido: 1,
+      notaSubstituida: null,
+    });
+
+    const a = analisar(disc([3.5, 6.8, 7.0], { nota4: 5.5 }));
+    expect(a.notasEfetivas).toEqual([5.5, 6.8, 7.0]);
+    expect(a.indiceSubstituido).toBe(0);
+    expect(a.notaSubstituida).toBe(3.5);
+    expect(a.soma).toBeCloseTo(19.3, 5);
+    expect(a.situacao.id).toBe("garantida");
+    expect(a.precisaN4).toBeNull();
+
+    expect(analisar(disc([3.0, 6.0, 6.0])).precisaN4).toBe(6);
+    expect(analisar(disc([2.0, 3.0, 4.0])).precisaN4).toBeNull();
+    expect(analisar(disc([8.5, 2.0, null])).precisaN4).toBe(7.5);
+    expect(analisar(disc([2.0, 4.5, null])).precisaN4).toBeNull();
+    expect(analisar(disc([null, null, null])).precisaN4).toBeNull();
+    expect(analisar(disc([9.0, 9.0, null])).precisaN4).toBeNull();
+    expect(analisar(disc([3.0, 6.0, 6.0], { faltas: 21 })).precisaN4).toBeNull();
   });
 });
 
@@ -113,7 +166,35 @@ describe("com o histórico de demonstração", () => {
   it("detecta nota nova", () => {
     const depois = structuredClone(h);
     depois.semestres[0].disciplinas[0].notas[1] = 9.5;
-    expect(notasNovas(h, depois)).toEqual(["N2 de Inteligência Artificial: 9,5"]);
+    depois.semestres[0].disciplinas[1].nota4 = 8.0;
+    expect(notasNovas(h, depois)).toEqual([
+      "N2 de Inteligência Artificial: 9,5",
+      "N4 de Arquitetura de Software: 8,0",
+    ]);
     expect(notasNovas(h, h)).toEqual([]);
+  });
+
+  it("semestreConsolidado: ano anterior mesmo aberto é true; ano atual aberto é false", () => {
+    const agora = new Date(2026, 10, 14);
+    const abertoAtual = sem("202623");
+    const encerradoAtual = sem("202611");
+    const abertoAnoAnterior = {
+      ...sem("202523"),
+      disciplinas: [disc([7, null, null])],
+    };
+    const vazioAnoAnterior = { ...sem("202511"), disciplinas: [] };
+    const atipicoAberto = {
+      codigo: "ATIPICO",
+      curso: "ESW",
+      disciplinas: [disc([7, null, null])],
+      atualizadoEm: agora.toISOString(),
+    };
+
+    expect(semestreEncerrado(abertoAnoAnterior)).toBe(false);
+    expect(semestreConsolidado(abertoAnoAnterior, agora)).toBe(true);
+    expect(semestreConsolidado(abertoAtual, agora)).toBe(false);
+    expect(semestreConsolidado(encerradoAtual, agora)).toBe(true);
+    expect(semestreConsolidado(vazioAnoAnterior, agora)).toBe(false);
+    expect(semestreConsolidado(atipicoAberto, agora)).toBe(false);
   });
 });

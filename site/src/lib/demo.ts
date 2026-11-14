@@ -1,14 +1,22 @@
 /** Histórico fictício para explorar o site sem conta no portal. */
+import { aplicarNota4 } from "./dominio/regras";
 import type { Disciplina, Historico, Semestre } from "./dominio/tipos";
 
 type Notas = [number | null, number | null, number | null];
 
 export function historicoDemo(agora = new Date()): Historico {
   let seq = 0;
-  const d = (nome: string, sigla: string, notas: Notas, faltas = 0): Disciplina => {
-    const completas = notas.every((n) => n !== null);
+  const d = (
+    nome: string,
+    sigla: string,
+    notas: Notas,
+    faltas = 0,
+    nota4: number | null = null,
+  ): Disciplina => {
+    const { efetivas } = aplicarNota4(notas, nota4);
+    const completas = efetivas.every((n) => n !== null);
     const media = completas
-      ? Math.round(((notas as number[]).reduce((a, b) => a + b, 0) / 3) * 10) / 10
+      ? Math.round(((efetivas as number[]).reduce((a, b) => a + b, 0) / 3) * 10) / 10
       : null;
     return {
       chave: `demo-${seq++}`,
@@ -17,6 +25,7 @@ export function historicoDemo(agora = new Date()): Historico {
       nome: `${nome.toUpperCase()} - ${sigla}`,
       situacao: media === null ? "Matriculado" : media >= 6 ? "Aprovado" : "Reprovado",
       notas,
+      nota4,
       mediaFinal: media,
       faltas,
     };
@@ -57,7 +66,7 @@ export function historicoDemo(agora = new Date()): Historico {
         d("Banco de Dados I", "BD1", [7.5, 8.0, 8.8]),
         d("Engenharia de Requisitos", "REQ", [8.0, 8.4, 9.0], 4),
         d("Sistemas Operacionais", "SOP", [6.0, 6.5, 7.5], 8),
-        d("Probabilidade e Estatística", "PES", [5.5, 6.8, 7.0], 12),
+        d("Probabilidade e Estatística", "PES", [3.5, 6.8, 7.0], 12, 5.5),
         d("Desenvolvimento Web", "WEB", [9.0, 9.2, 9.6]),
       ]),
       s("202423", [

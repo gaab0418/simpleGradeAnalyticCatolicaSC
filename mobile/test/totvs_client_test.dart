@@ -15,7 +15,13 @@ void main() {
   late HttpServer servidor;
   late TotvsClient cliente;
   late List<String> pedidos;
+  late List<Map<String, String>> cookiesRecebidos;
   var falharNotas = false;
+  var setCookieInvalido = false;
+  var tokenComPontoVirgula = false;
+  var contextoInvalido = false;
+  var respostaGrande = false;
+  var respostaGrandeChunked = false;
 
   Map<String, String> cookies(HttpRequest r) => {
     for (final par in (r.headers.value('cookie') ?? '').split('; '))
@@ -33,7 +39,13 @@ void main() {
 
   setUp(() async {
     pedidos = [];
+    cookiesRecebidos = [];
     falharNotas = false;
+    setCookieInvalido = false;
+    tokenComPontoVirgula = false;
+    contextoInvalido = false;
+    respostaGrande = false;
+    respostaGrandeChunked = false;
     servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     cliente = TotvsClient(base: Uri.parse('http://127.0.0.1:${servidor.port}'));
 
@@ -41,11 +53,15 @@ void main() {
       final rota = r.uri.path.split('/').last;
       pedidos.add('${r.method} ${r.uri.path}');
       final ck = cookies(r);
+      cookiesRecebidos.add(ck);
       final logado = ck['SESSAO'] == 'abc' && ck['AUTO'] == 'ok';
 
       switch (rota) {
         case '': // pagina inicial do portal
           r.response.headers.add('set-cookie', 'SESSAO=abc; Path=/; HttpOnly');
+          if (setCookieInvalido) {
+            r.response.headers.add('set-cookie', 'NOME RUIM=1; Path=/');
+          }
           await r.response.close();
         case 'Login':
           final corpo = jsonDecode(await utf8.decoder.bind(r).join()) as Map;
@@ -55,8 +71,10 @@ void main() {
               corpo['alias'] != 'CorporeRM') {
             return json(r, {'messages': 'invalido'}, status: 401);
           }
+          final brutoToken =
+              tokenComPontoVirgula ? '{"ctx":"a;b"}' : _contextoLogin;
           final token = Uri.encodeComponent(
-            base64.encode(utf8.encode(_contextoLogin)),
+            base64.encode(utf8.encode(brutoToken)),
           );
           await json(r, {
             'data': {'value': token},
@@ -79,7 +97,7 @@ void main() {
           await json(r, {
             'data': [
               {
-                'IDCONTEXTOALUNO': 'CTX-2',
+                'IDCONTEXTOALUNO': contextoInvalido ? 'CTX;INJ=1' : 'CTX-2',
                 'CODPERLET': 202623,
                 'NOMECURSO': 'ENG. DE SOFTWARE',
                 'NOMEALUNO': 'FULANO DE TAL',
@@ -98,6 +116,26 @@ void main() {
           });
         case 'NotaEtapa':
           if (!logado) return json(r, {}, status: 401);
+          if (respostaGrande) {
+            final excesso = utf8.encode('x' * (2 * 1024 * 1024 + 128));
+            r.response
+              ..statusCode = 200
+              ..headers.contentLength = excesso.length
+              ..add(excesso);
+            return r.response.close();
+          }
+          if (respostaGrandeChunked) {
+            r.response
+              ..statusCode = 200
+              ..headers.chunkedTransferEncoding = true
+              ..bufferOutput = false;
+            final bloco = utf8.encode('y' * (256 * 1024));
+            for (var i = 0; i < 9; i++) {
+              r.response.add(bloco);
+              await r.response.flush();
+            }
+            return r.response.close();
+          }
           if (falharNotas) {
             r.response.statusCode = 500;
             r.response.write('<html>erro</html>');
@@ -204,6 +242,70 @@ void main() {
     expect(
       const Credenciais('u', 'segredo').toString(),
       isNot(contains('segredo')),
+    );
+  });
+
+  test('cookies suspeitos são ignorados e contexto inválido é rejeitado', () async {
+    setCookieInvalido = true;
+    contextoInvalido = true;
+    final sessao = await cliente.entrar(const Credenciais(_usuario, _senha));
+    addTearDown(sessao.fechar);
+
+    for (final ck in cookiesRecebidos) {
+      expect(ck.containsKey('NOME RUIM'), isFalse);
+    }
+
+    await expectLater(
+      sessao.disciplinas(sessao.contextos.first),
+      throwsA(
+        isA<PortalException>().having(
+          (e) => e.tipo,
+          'tipo',
+          FalhaPortal.portal,
+        ),
+      ),
+    );
+
+    tokenComPontoVirgula = true;
+    await expectLater(
+      cliente.entrar(const Credenciais(_usuario, _senha)),
+      throwsA(
+        isA<PortalException>().having(
+          (e) => e.tipo,
+          'tipo',
+          FalhaPortal.portal,
+        ),
+      ),
+    );
+  });
+
+  test('resposta acima de 2 MB é bloqueada por Content-Length e no stream', () async {
+    final sessao = await cliente.entrar(const Credenciais(_usuario, _senha));
+    addTearDown(sessao.fechar);
+
+    respostaGrande = true;
+    await expectLater(
+      sessao.disciplinas(sessao.contextos.first),
+      throwsA(
+        isA<PortalException>().having(
+          (e) => e.tipo,
+          'tipo',
+          FalhaPortal.portal,
+        ),
+      ),
+    );
+
+    respostaGrande = false;
+    respostaGrandeChunked = true;
+    await expectLater(
+      sessao.disciplinas(sessao.contextos.first),
+      throwsA(
+        isA<PortalException>().having(
+          (e) => e.tipo,
+          'tipo',
+          FalhaPortal.portal,
+        ),
+      ),
     );
   });
 }

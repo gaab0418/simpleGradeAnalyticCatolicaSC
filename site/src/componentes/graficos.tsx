@@ -1,21 +1,95 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+  type ChartData,
+  type ChartOptions,
+  type Plugin,
+  type ScriptableLineSegmentContext,
+} from "chart.js";
+import { Bar, Line } from "react-chartjs-2";
 import { regras } from "@/lib/config";
 import { fmt } from "@/lib/dominio/formato";
 
-/** Largura real do contêiner, para o SVG desenhar texto em tamanho fixo. */
-function useLargura<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [largura, setLargura] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new ResizeObserver(([e]) => setLargura(Math.round(e.contentRect.width)));
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return [ref, largura] as const;
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Filler,
+  Tooltip,
+);
+
+interface CoresGrafico {
+  acento: string;
+  acentoSuave: string;
+  borda: string;
+  texto2: string;
+  texto3: string;
+  superficie: string;
+  critico: string;
+  fonte: string;
+}
+
+const FALLBACK_CORES: CoresGrafico = {
+  acento: "#1d4ed8",
+  acentoSuave: "rgba(29, 78, 216, 0.08)",
+  borda: "#dfddd3",
+  texto2: "#555863",
+  texto3: "#7b7f8c",
+  superficie: "#ffffff",
+  critico: "#b3261e",
+  fonte: "sans-serif",
+};
+
+let cacheCores: CoresGrafico = FALLBACK_CORES;
+let cacheChave = "";
+
+function lerCoresComputadas(): CoresGrafico {
+  if (typeof window === "undefined") return FALLBACK_CORES;
+  const cs = getComputedStyle(document.documentElement);
+  const v = (nome: string, padrao: string) => cs.getPropertyValue(nome).trim() || padrao;
+  const acento = v("--acento", FALLBACK_CORES.acento);
+  const acentoSuave = v("--acento-suave", FALLBACK_CORES.acentoSuave);
+  const borda = v("--borda", FALLBACK_CORES.borda);
+  const texto2 = v("--texto-2", FALLBACK_CORES.texto2);
+  const texto3 = v("--texto-3", FALLBACK_CORES.texto3);
+  const superficie = v("--superficie", FALLBACK_CORES.superficie);
+  const critico = v("--critico", FALLBACK_CORES.critico);
+  const fonte = cs.fontFamily || FALLBACK_CORES.fonte;
+  const chave = `${acento}|${acentoSuave}|${borda}|${texto2}|${texto3}|${superficie}|${critico}|${fonte}`;
+  if (chave !== cacheChave) {
+    cacheChave = chave;
+    cacheCores = { acento, acentoSuave, borda, texto2, texto3, superficie, critico, fonte };
+  }
+  return cacheCores;
+}
+
+function inscreverTema(aoMudar: () => void): () => void {
+  const obs = new MutationObserver(() => aoMudar());
+  obs.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-tema"],
+  });
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener("change", aoMudar);
+  return () => {
+    obs.disconnect();
+    mq.removeEventListener("change", aoMudar);
+  };
+}
+
+function useCoresGrafico(): CoresGrafico {
+  return useSyncExternalStore(inscreverTema, lerCoresComputadas, () => FALLBACK_CORES);
 }
 
 export interface PontoEvolucao {
@@ -24,129 +98,249 @@ export interface PontoEvolucao {
   parcial: boolean;
 }
 
-/** Linha de uma série só, com o valor escrito em cada ponto e a linha do mínimo. */
+/** Linha com área suave, grade horizontal, trecho parcial tracejado e linha de mínimo. */
 export function GraficoEvolucao({ pontos }: { pontos: PontoEvolucao[] }) {
-  const [ref, w] = useLargura<HTMLDivElement>();
-  const h = 220;
-  const m = { cima: 24, baixo: 28, esq: 12, dir: 12 };
+  const cores = useCoresGrafico();
   const menor = Math.min(...pontos.map((p) => p.valor), regras.notaMinima);
   const base = Math.max(0, Math.floor(menor) - 1);
-  const x = (i: number) =>
-    pontos.length === 1
-      ? w / 2
-      : m.esq + 16 + (i * (w - m.esq - m.dir - 32)) / (pontos.length - 1);
-  const y = (v: number) =>
-    m.cima + ((regras.notaMaxima - v) * (h - m.cima - m.baixo)) / (regras.notaMaxima - base);
-  // Em telas estreitas os rótulos do eixo usam só "26/2".
-  const curto = w < 420;
+
+  const data = useMemo<ChartData<"line">>(
+    () => ({
+      labels: pontos.map((p) => p.rotulo),
+      datasets: [
+        {
+          label: "Média",
+          data: pontos.map((p) => p.valor),
+          borderColor: cores.acento,
+          backgroundColor: cores.acentoSuave,
+          borderWidth: 2.25,
+          fill: true,
+          tension: 0.25,
+          pointRadius: 4.5,
+          pointHoverRadius: 6.5,
+          pointHitRadius: 14,
+          pointBorderWidth: 2,
+          pointBackgroundColor: pontos.map((p) => (p.parcial ? cores.superficie : cores.acento)),
+          pointBorderColor: pontos.map((p) => (p.parcial ? cores.acento : cores.superficie)),
+          segment: {
+            borderDash: (ctx: ScriptableLineSegmentContext) =>
+              pontos[ctx.p1DataIndex]?.parcial ? [5, 4] : undefined,
+          },
+        },
+        {
+          label: `Mínimo ${fmt(regras.notaMinima)}`,
+          data: pontos.map(() => regras.notaMinima),
+          borderColor: cores.critico,
+          borderWidth: 1.25,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          pointHitRadius: 0,
+          fill: false,
+          tension: 0,
+        },
+      ],
+    }),
+    [pontos, cores],
+  );
+
+  const options = useMemo<ChartOptions<"line">>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false,
+      },
+      plugins: {
+        tooltip: {
+          backgroundColor: cores.superficie,
+          titleColor: cores.texto2,
+          bodyColor: cores.texto2,
+          borderColor: cores.borda,
+          borderWidth: 1,
+          padding: 10,
+          displayColors: false,
+          titleFont: { family: cores.fonte, size: 12, weight: "bold" },
+          bodyFont: { family: cores.fonte, size: 13 },
+          filter: (item) => item.datasetIndex === 0,
+          callbacks: {
+            title: (items) => {
+              const idx = items[0]?.dataIndex;
+              if (idx === undefined) return "";
+              const p = pontos[idx];
+              return p ? `${p.rotulo}${p.parcial ? " (em andamento)" : ""}` : "";
+            },
+            label: (ctx) => `Média: ${fmt(Number(ctx.parsed.y))}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { color: cores.borda },
+          ticks: {
+            color: cores.texto2,
+            font: { family: cores.fonte, size: 12 },
+          },
+        },
+        y: {
+          min: base,
+          max: regras.notaMaxima,
+          border: { display: false },
+          grid: { color: cores.borda },
+          ticks: {
+            color: cores.texto3,
+            font: { family: cores.fonte, size: 11 },
+            stepSize: 1,
+            callback: (val) => fmt(Number(val)),
+          },
+        },
+      },
+    }),
+    [cores, base, pontos],
+  );
 
   return (
-    <div ref={ref}>
-      {w > 0 && (
-        <svg
-          className="grafico"
-          width={w}
-          height={h}
+    <div className="grid gap-1.5">
+      <div className="relative h-[232px] w-full">
+        <Line
+          data={data}
+          options={options}
           role="img"
           aria-label={`Média por semestre: ${pontos.map((p) => `${p.rotulo} ${fmt(p.valor)}`).join(", ")}.`}
-        >
-          <line className="eixo" x1={m.esq} x2={w - m.dir} y1={h - m.baixo} y2={h - m.baixo} />
-          <line
-            className="referencia"
-            x1={m.esq}
-            x2={w - m.dir}
-            y1={y(regras.notaMinima)}
-            y2={y(regras.notaMinima)}
-          />
-          <text className="ref" x={w - m.dir} y={y(regras.notaMinima) + 14} textAnchor="end">
-            mínimo {regras.notaMinima}
-          </text>
-          <polyline
-            className="linha"
-            points={pontos.map((p, i) => `${x(i)},${y(p.valor)}`).join(" ")}
-          />
-          {pontos.map((p, i) => (
-            <g key={p.rotulo}>
-              <circle
-                className={`ponto${p.parcial ? " parcial" : ""}`}
-                cx={x(i)}
-                cy={y(p.valor)}
-                r={4.5}
-              >
-                <title>{`${p.rotulo}: média ${fmt(p.valor)}${p.parcial ? " (parcial)" : ""}`}</title>
-              </circle>
-              <text className="valor" x={x(i)} y={y(p.valor) - 10} textAnchor="middle">
-                {fmt(p.valor)}
-              </text>
-              <text x={x(i)} y={h - 8} textAnchor="middle">
-                {curto ? p.rotulo.slice(2) : p.rotulo}
-              </text>
-            </g>
-          ))}
-        </svg>
-      )}
+        />
+      </div>
     </div>
   );
 }
 
-/** Colunas de uma série só, com o valor em cima de cada uma. */
+const formatarValor = (v: number, inteiro: boolean) => (inteiro ? String(Math.round(v)) : fmt(v));
+
+/** Colunas verticais com grade discreta e linha de referência opcional. */
 export function GraficoColunas({
   itens,
   maximo,
+  referencia,
   inteiro = false,
   descricao,
 }: {
   itens: { rotulo: string; valor: number }[];
   maximo?: number;
+  referencia?: number;
   inteiro?: boolean;
   descricao: string;
 }) {
-  const [ref, w] = useLargura<HTMLDivElement>();
-  const h = 190;
-  const m = { cima: 22, baixo: 28 };
-  const teto = maximo ?? Math.max(1, ...itens.map((i) => i.valor));
-  const passo = w / itens.length;
-  const largura = Math.min(44, passo * 0.56);
-  const altura = (v: number) => (v / teto) * (h - m.cima - m.baixo);
-  const txt = (v: number) => (inteiro ? String(v) : fmt(v));
-  const curto = passo < 56;
+  const cores = useCoresGrafico();
+
+  const data = useMemo<ChartData<"bar">>(
+    () => ({
+      labels: itens.map((i) => i.rotulo),
+      datasets: [
+        {
+          label: descricao,
+          data: itens.map((i) => i.valor),
+          backgroundColor: cores.acento,
+          hoverBackgroundColor: cores.acento,
+          borderRadius: 6,
+          maxBarThickness: 48,
+        },
+      ],
+    }),
+    [itens, descricao, cores],
+  );
+
+  const options = useMemo<ChartOptions<"bar">>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        tooltip: {
+          backgroundColor: cores.superficie,
+          titleColor: cores.texto2,
+          bodyColor: cores.texto2,
+          borderColor: cores.borda,
+          borderWidth: 1,
+          padding: 10,
+          displayColors: false,
+          titleFont: { family: cores.fonte, size: 12, weight: "bold" },
+          bodyFont: { family: cores.fonte, size: 13 },
+          callbacks: {
+            label: (ctx) => formatarValor(Number(ctx.parsed.y), inteiro),
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { color: cores.borda },
+          ticks: {
+            color: cores.texto2,
+            font: { family: cores.fonte, size: 12 },
+          },
+        },
+        y: {
+          min: 0,
+          max: maximo,
+          suggestedMax: maximo ?? Math.max(1, ...itens.map((i) => i.valor), referencia ?? 0),
+          border: { display: false },
+          grid: { color: cores.borda },
+          ticks: {
+            color: cores.texto3,
+            font: { family: cores.fonte, size: 11 },
+            precision: inteiro ? 0 : undefined,
+            callback: (val) => formatarValor(Number(val), inteiro),
+          },
+        },
+      },
+    }),
+    [cores, maximo, inteiro, itens, referencia],
+  );
+
+  const plugins = useMemo<Plugin<"bar">[]>(() => {
+    if (referencia === undefined) return [];
+    return [
+      {
+        id: "linhaReferenciaColunas",
+        afterDatasetsDraw(chart) {
+          const yScale = chart.scales.y;
+          if (!yScale) return;
+          const y = yScale.getPixelForValue(referencia);
+          const { left, right, top, bottom } = chart.chartArea;
+          if (y < top || y > bottom) return;
+          const cs = getComputedStyle(chart.canvas);
+          const cor = cs.getPropertyValue("--critico").trim() || FALLBACK_CORES.critico;
+          const { ctx } = chart;
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.25;
+          ctx.strokeStyle = cor;
+          ctx.moveTo(left, y);
+          ctx.lineTo(right, y);
+          ctx.stroke();
+          ctx.fillStyle = cor;
+          ctx.font = `500 11px ${cs.fontFamily || "sans-serif"}`;
+          ctx.textAlign = "right";
+          ctx.textBaseline = "bottom";
+          ctx.fillText(`mínimo ${referencia}`, right, y - 4);
+          ctx.restore();
+        },
+      },
+    ];
+  }, [referencia]);
 
   return (
-    <div ref={ref}>
-      {w > 0 && (
-        <svg
-          className="grafico"
-          width={w}
-          height={h}
+    <div className="grid gap-1.5">
+      <div className="relative h-[196px] w-full">
+        <Bar
+          data={data}
+          options={options}
+          plugins={plugins}
           role="img"
-          aria-label={`${descricao}: ${itens.map((i) => `${i.rotulo} ${txt(i.valor)}`).join(", ")}.`}
-        >
-          <line className="eixo" x1={0} x2={w} y1={h - m.baixo} y2={h - m.baixo} />
-          {itens.map((item, i) => {
-            const cx = passo * i + passo / 2;
-            const a = altura(item.valor);
-            const topo = h - m.baixo - a;
-            return (
-              <g key={item.rotulo}>
-                {a > 0 && (
-                  <path
-                    className="coluna"
-                    d={`M${cx - largura / 2},${h - m.baixo} v${-(a - Math.min(4, a))} q0,${-Math.min(4, a)} ${Math.min(4, a)},${-Math.min(4, a)} h${largura - 2 * Math.min(4, a)} q${Math.min(4, a)},0 ${Math.min(4, a)},${Math.min(4, a)} v${a - Math.min(4, a)} z`}
-                  >
-                    <title>{`${item.rotulo}: ${txt(item.valor)}`}</title>
-                  </path>
-                )}
-                <text className="valor" x={cx} y={topo - 6} textAnchor="middle">
-                  {txt(item.valor)}
-                </text>
-                <text x={cx} y={h - 8} textAnchor="middle">
-                  {curto && item.rotulo.length > 4 ? item.rotulo.slice(2) : item.rotulo}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-      )}
+          aria-label={`${descricao}: ${itens.map((i) => `${i.rotulo} ${formatarValor(i.valor, inteiro)}`).join(", ")}.`}
+        />
+      </div>
     </div>
   );
 }

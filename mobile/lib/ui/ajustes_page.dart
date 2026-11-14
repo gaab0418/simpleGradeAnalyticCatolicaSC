@@ -60,7 +60,7 @@ class AjustesPage extends StatelessWidget {
               showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: TemaApp.sistema, label: Text('Sistema')),
-                ButtonSegment(value: TemaApp.claro, label: Text('Paleta')),
+                ButtonSegment(value: TemaApp.claro, label: Text('Claro')),
                 ButtonSegment(value: TemaApp.escuro, label: Text('Escuro')),
               ],
               selected: {app.prefs.tema},

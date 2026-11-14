@@ -43,14 +43,14 @@ class Paleta extends ThemeExtension<Paleta> {
   Color get critico => tons[Tom.critico]!.cor;
 
   static const claro = Paleta(
-    fundo: Color(0xFFF6F6F3),
+    fundo: Color(0xFFF5F4EF),
     superficie: Color(0xFFFFFFFF),
-    superficie2: Color(0xFFF1F1ED),
-    borda: Color(0xFFE2E2DC),
-    bordaForte: Color(0xFFC9C9C1),
-    texto: Color(0xFF1A1A1E),
-    texto2: Color(0xFF5C5C66),
-    texto3: Color(0xFF85858F),
+    superficie2: Color(0xFFEEEDE6),
+    borda: Color(0xFFDFDDD3),
+    bordaForte: Color(0xFFC9C6B8),
+    texto: Color(0xFF16181D),
+    texto2: Color(0xFF555863),
+    texto3: Color(0xFF7B7F8C),
     acento: Color(0xFF1D4ED8),
     sobreAcento: Color(0xFFFFFFFF),
     tons: {
@@ -59,28 +59,28 @@ class Paleta extends ThemeExtension<Paleta> {
       Tom.atencao: (cor: Color(0xFF8A5A00), fundo: Color(0xFFFBF0D0)),
       Tom.apertado: (cor: Color(0xFFB0460B), fundo: Color(0xFFFDE8D8)),
       Tom.critico: (cor: Color(0xFFB3261E), fundo: Color(0xFFFBE4E2)),
-      Tom.neutro: (cor: Color(0xFF5C5C66), fundo: Color(0xFFECECE7)),
+      Tom.neutro: (cor: Color(0xFF555863), fundo: Color(0xFFECEBE4)),
     },
   );
 
   static const escuro = Paleta(
-    fundo: Color(0xFF111214),
-    superficie: Color(0xFF191A1D),
-    superficie2: Color(0xFF222327),
-    borda: Color(0xFF2C2D32),
-    bordaForte: Color(0xFF44464D),
-    texto: Color(0xFFEDEDF0),
-    texto2: Color(0xFFA5A5B0),
-    texto3: Color(0xFF7D7D88),
+    fundo: Color(0xFF111315),
+    superficie: Color(0xFF171A1E),
+    superficie2: Color(0xFF1F2329),
+    borda: Color(0xFF282D35),
+    bordaForte: Color(0xFF383F4B),
+    texto: Color(0xFFECECEF),
+    texto2: Color(0xFF9EA3AE),
+    texto3: Color(0xFF6D727F),
     acento: Color(0xFF8AB0FF),
-    sobreAcento: Color(0xFF0B1020),
+    sobreAcento: Color(0xFF0D1426),
     tons: {
       Tom.ok: (cor: Color(0xFF6FD69A), fundo: Color(0xFF16301F)),
       Tom.calmo: (cor: Color(0xFF8FBCF5), fundo: Color(0xFF16273D)),
       Tom.atencao: (cor: Color(0xFFE8BF5A), fundo: Color(0xFF33290F)),
       Tom.apertado: (cor: Color(0xFFF39A62), fundo: Color(0xFF3A2114)),
       Tom.critico: (cor: Color(0xFFF58A82), fundo: Color(0xFF3D1A18)),
-      Tom.neutro: (cor: Color(0xFFA5A5B0), fundo: Color(0xFF26272B)),
+      Tom.neutro: (cor: Color(0xFF9EA3AE), fundo: Color(0xFF242830)),
     },
   );
 

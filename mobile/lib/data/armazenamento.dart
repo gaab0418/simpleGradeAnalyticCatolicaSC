@@ -66,6 +66,7 @@ class Preferencias {
 
 class ArmazenamentoLocal {
   static const _kHistorico = 'historico.v1';
+  static const _kPassado = 'historico.passado.v2';
   static const _kTema = 'pref.tema';
   static const _kBiometria = 'pref.biometria';
 
@@ -87,6 +88,48 @@ class ArmazenamentoLocal {
       _prefs.setString(_kHistorico, jsonEncode(h.toJson()));
 
   Future<void> apagarHistorico() => _prefs.remove(_kHistorico);
+
+  static String _chaveUsuario(String usuario) => usuario.trim().toLowerCase();
+
+  Future<Map<String, dynamic>> _lerMapaPassados() async {
+    final bruto = await _prefs.getString(_kPassado);
+    if (bruto == null) return <String, dynamic>{};
+    try {
+      final dec = jsonDecode(bruto);
+      if (dec is Map) return Map<String, dynamic>.from(dec);
+    } catch (_) {
+      await _prefs.remove(_kPassado);
+    }
+    return <String, dynamic>{};
+  }
+
+  Future<List<Semestre>> lerSemestresPassados(String usuario) async {
+    final chave = _chaveUsuario(usuario);
+    if (chave.isEmpty) return const [];
+    final mapa = await _lerMapaPassados();
+    final lista = mapa[chave];
+    if (lista is! List) return const [];
+    try {
+      return [
+        for (final item in lista)
+          if (item is Map)
+            Semestre.fromJson(Map<String, dynamic>.from(item)),
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> salvarSemestresPassados(
+    String usuario,
+    Iterable<Semestre> semestres,
+  ) async {
+    final chave = _chaveUsuario(usuario);
+    if (chave.isEmpty) return;
+    final mapa = await _lerMapaPassados();
+    mapa[chave] = [for (final s in semestres) s.toJson()];
+    await _prefs.setString(_kPassado, jsonEncode(mapa));
+  }
 
   Future<Preferencias> lerPreferencias() async {
     final tema = await _prefs.getString(_kTema);

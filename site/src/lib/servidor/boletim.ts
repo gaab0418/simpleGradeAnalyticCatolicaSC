@@ -12,6 +12,9 @@ export interface RespostaBoletim {
   semestres: Semestre[];
 }
 
+const MAX_PERIODOS = 24;
+const MAX_CONTEXTOS_POR_PERIODO = 4;
+
 export async function baixarBoletim(
   c: Credenciais,
   pular: ReadonlySet<string> = new Set(),
@@ -26,10 +29,12 @@ export async function baixarBoletim(
     porPeriodo.set(ctx.codigo, [...(porPeriodo.get(ctx.codigo) ?? []), ctx]);
   }
 
+  const periodos = [...porPeriodo.keys()].slice(0, MAX_PERIODOS);
   const semestres: Semestre[] = [];
   // Em sequência: o período é escolhido por cookie na sessão do portal.
-  for (const [codigo, ctxs] of porPeriodo) {
+  for (const codigo of periodos) {
     if (pular.has(codigo)) continue;
+    const ctxs = porPeriodo.get(codigo)!.slice(0, MAX_CONTEXTOS_POR_PERIODO);
     const disciplinas = new Map<string, Semestre["disciplinas"][number]>();
     for (const ctx of ctxs) {
       for (const d of await sessao.disciplinas(ctx)) {
@@ -43,7 +48,7 @@ export async function baixarBoletim(
       atualizadoEm: new Date().toISOString(),
     });
   }
-  return { aluno: sessao.aluno, periodos: [...porPeriodo.keys()], semestres };
+  return { aluno: sessao.aluno, periodos, semestres };
 }
 
 /** Converte qualquer erro em resposta JSON sem vazar detalhes internos. */

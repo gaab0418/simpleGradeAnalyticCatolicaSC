@@ -5,6 +5,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import '../domain/models.dart';
 import 'portal.dart';
@@ -12,6 +13,9 @@ import 'portal.dart';
 PortalGateway criarPortal() => TotvsClient();
 
 const _cookieContexto = 'EduContextoAlunoResponsavelAPI';
+const _maxBytesResposta = 2 * 1024 * 1024;
+final _nomeCookieValido = RegExp(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$");
+final _valorCookieProibido = RegExp(r'[\r\n\x00-\x1f\x7f;]');
 const _userAgent =
     'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) '
     'Chrome/149.0.0.0 Mobile Safari/537.36';
@@ -93,12 +97,22 @@ class _Sessao implements PortalSessao {
     }
 
     // 3. O token e um contexto em base64; vira cookie e chave de auto-login.
-    final chave = Uri.decodeComponent(token);
+    final String chave;
     try {
-      _cookies[_cookieContexto] = utf8.decode(
+      chave = Uri.decodeComponent(token);
+      final valorContexto = utf8.decode(
         base64.decode(base64.normalize(chave)),
       );
+      if (_valorCookieProibido.hasMatch(valorContexto)) {
+        throw const FormatException('Cookie invalido');
+      }
+      _cookies[_cookieContexto] = valorContexto;
     } on FormatException {
+      throw const PortalException(
+        FalhaPortal.portal,
+        'O portal respondeu de um jeito inesperado no login.',
+      );
+    } on ArgumentError {
       throw const PortalException(
         FalhaPortal.portal,
         'O portal respondeu de um jeito inesperado no login.',
@@ -121,6 +135,12 @@ class _Sessao implements PortalSessao {
 
   @override
   Future<List<Disciplina>> disciplinas(ContextoPeriodo contexto) async {
+    if (_valorCookieProibido.hasMatch(contexto.id)) {
+      throw const PortalException(
+        FalhaPortal.portal,
+        'O portal respondeu um contexto inválido.',
+      );
+    }
     _cookies[_cookieContexto] = contexto.id;
     final notas = _dados(
       await _requisitar('GET', _url('${_api}TOTVSEducacional/NotaEtapa')),
@@ -209,10 +229,15 @@ class _Sessao implements PortalSessao {
         ..set(HttpHeaders.acceptHeader, 'application/json, text/plain, */*')
         ..set(HttpHeaders.acceptLanguageHeader, 'pt-BR,pt;q=0.9')
         ..set(HttpHeaders.refererHeader, _url(referer ?? _app).toString());
-      if (_cookies.isNotEmpty) {
+      final cookiesSeguros = _cookies.entries.where(
+        (e) =>
+            _nomeCookieValido.hasMatch(e.key) &&
+            !_valorCookieProibido.hasMatch(e.value),
+      );
+      if (cookiesSeguros.isNotEmpty) {
         req.headers.set(
           HttpHeaders.cookieHeader,
-          _cookies.entries.map((e) => '${e.key}=${e.value}').join('; '),
+          cookiesSeguros.map((e) => '${e.key}=${e.value}').join('; '),
         );
       }
       if (corpo != null) {
@@ -226,7 +251,11 @@ class _Sessao implements PortalSessao {
 
       final destino = resp.headers.value(HttpHeaders.locationHeader);
       if (resp.isRedirect && destino != null) {
-        await resp.drain<void>();
+        if (resp.contentLength > _maxBytesResposta) {
+          await resp.listen((_) {}).cancel();
+        } else {
+          await resp.drain<void>();
+        }
         url = url.resolve(destino);
         if (resp.statusCode != 307 && resp.statusCode != 308) {
           metodo = 'GET';
@@ -234,13 +263,61 @@ class _Sessao implements PortalSessao {
         }
         continue;
       }
-      final texto = await utf8.decoder.bind(resp).join();
+      final texto = await _lerTextoLimitado(resp, _maxBytesResposta);
       return _Resposta(resp.statusCode, texto);
     }
     throw const PortalException(
       FalhaPortal.portal,
       'O portal entrou em um ciclo de redirecionamentos.',
     );
+  }
+
+  Future<String> _lerTextoLimitado(
+    HttpClientResponse resp,
+    int maxBytes,
+  ) async {
+    final clHeader = resp.headers.value(HttpHeaders.contentLengthHeader);
+    final declarado = clHeader == null ? null : int.tryParse(clHeader.trim());
+    if (resp.contentLength > maxBytes ||
+        (declarado != null && declarado > maxBytes)) {
+      await resp.listen((_) {}).cancel();
+      throw const PortalException(
+        FalhaPortal.portal,
+        'O portal retornou uma resposta grande demais.',
+      );
+    }
+    final builder = BytesBuilder(copy: false);
+    final completer = Completer<String>();
+    late final StreamSubscription<List<int>> sub;
+    sub = resp.listen(
+      (chunk) {
+        if (builder.length + chunk.length > maxBytes) {
+          unawaited(sub.cancel());
+          if (!completer.isCompleted) {
+            completer.completeError(
+              const PortalException(
+                FalhaPortal.portal,
+                'O portal retornou uma resposta grande demais.',
+              ),
+            );
+          }
+          return;
+        }
+        builder.add(chunk);
+      },
+      onError: (Object err, StackTrace st) {
+        if (!completer.isCompleted) completer.completeError(err, st);
+      },
+      onDone: () {
+        if (!completer.isCompleted) {
+          completer.complete(
+            utf8.decode(builder.takeBytes(), allowMalformed: true),
+          );
+        }
+      },
+      cancelOnError: true,
+    );
+    return completer.future;
   }
 
   void _guardarCookies(HttpClientResponse resp) {
@@ -250,7 +327,12 @@ class _Sessao implements PortalSessao {
       if (i <= 0) continue;
       final nome = par.substring(0, i).trim();
       final valor = par.substring(i + 1).trim();
-      valor.isEmpty ? _cookies.remove(nome) : _cookies[nome] = valor;
+      if (!_nomeCookieValido.hasMatch(nome)) continue;
+      if (valor.isEmpty) {
+        _cookies.remove(nome);
+      } else if (!_valorCookieProibido.hasMatch(valor)) {
+        _cookies[nome] = valor;
+      }
     }
   }
 }

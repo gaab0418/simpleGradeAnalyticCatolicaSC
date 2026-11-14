@@ -2,10 +2,18 @@
 // base64, redirecionamento, troca de período) e a cifra do cookie de sessão.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { dentroDoLimite, mesmaOrigem } from "@/lib/servidor/protecao";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { analisar } from "@/lib/dominio/regras";
+import {
+  dentroDoLimite,
+  dentroDoLimiteConta,
+  extrairPular,
+  lerCorpo,
+  limparTentativas,
+  mesmaOrigem,
+} from "@/lib/servidor/protecao";
 import { abrir, podeLembrar, selar } from "@/lib/servidor/sessao";
-import { ErroPortal, SessaoPortal, parseNota } from "@/lib/servidor/totvs";
+import { ErroPortal, SessaoPortal, extrairNota4, montarDisciplinas, parseNota } from "@/lib/servidor/totvs";
 
 const USUARIO = "aluno";
 const SENHA = 's3nh@ "com" espaço';
@@ -162,10 +170,103 @@ describe("cliente do portal", () => {
     ).rejects.toMatchObject({ tipo: "portal" });
   });
 
+  it("rejeita cookie injetado no token de login", async () => {
+    const falso: typeof fetch = async (input) => {
+      const u = String(input);
+      if (u.endsWith("/Login")) {
+        const token = encodeURIComponent(Buffer.from("ok; ADMIN=1\r\nX-Test: 1").toString("base64"));
+        return new Response(JSON.stringify({ data: { value: token } }), { status: 200 });
+      }
+      return new Response(null, { status: 200 });
+    };
+    await expect(
+      SessaoPortal.entrar(USUARIO, SENHA, { base, fetch: falso }),
+    ).rejects.toMatchObject({ tipo: "portal" });
+  });
+
+  it("ignora Set-Cookie inválido e rejeita resposta maior que 2 MB", async () => {
+    let cookiesEnviados = "";
+    const falso: typeof fetch = async (input, init) => {
+      const u = String(input);
+      if (u.endsWith("/PortalEducacional/")) {
+        const resp = new Response("", { status: 200 });
+        Object.defineProperty(resp.headers, "getSetCookie", {
+          value: () => ["SESSAO=abc; Path=/", "bad name=1; Path=/", "INJ=x\r\nEvil: 1"],
+        });
+        return resp;
+      }
+      if (u.endsWith("/Login")) {
+        cookiesEnviados = (init?.headers as Record<string, string>)?.cookie ?? "";
+        return new Response("x".repeat(2 * 1024 * 1024 + 16), { status: 200 });
+      }
+      return new Response("{}", { status: 200 });
+    };
+    await expect(
+      SessaoPortal.entrar(USUARIO, SENHA, { base, fetch: falso }),
+    ).rejects.toMatchObject({ tipo: "portal" });
+    expect(cookiesEnviados).toContain("SESSAO=abc");
+    expect(cookiesEnviados).not.toContain("bad name");
+    expect(cookiesEnviados).not.toContain("INJ=");
+  });
+
   it("nota embrulhada em HTML e com vírgula", () => {
     expect(parseNota("<font color=red>3,3</font>")).toBe(3.3);
     expect(parseNota("")).toBeNull();
     expect(parseNota(null)).toBeNull();
+  });
+
+  it("extrai N4 de 4 - Nota 4 ou coluna 4 alternativa, ignorando 4 - Média Final", () => {
+    expect(extrairNota4({ "4 - Nota 4": "<font color=red>5,5</font>" })).toBe(5.5);
+    expect(extrairNota4({ "4 - Substitutiva": "7,0" })).toBe(7);
+    expect(extrairNota4({ "4 - Média Final": "8,0" })).toBeNull();
+    expect(extrairNota4({ "4 - Nota 4": null, "4 - Média Final": "8,0" })).toBeNull();
+
+    const [d] = montarDisciplinas(
+      [
+        {
+          IDTURMADISC: 10,
+          CODTURMA: "T1",
+          CODDISC: "PES",
+          DISCIPLINA: "PROBABILIDADE - PES",
+          SITUACAO: "Aprovado",
+          "1 - Nota 1": "<font color=red>3,5</font>",
+          "2 - Nota 2": "6,8",
+          "3 - Nota 3": "7,0",
+          "4 - Nota 4": "5,5",
+          "6 - Média Final": "6,4",
+        },
+      ],
+      [],
+    );
+    expect(d.notas).toEqual([3.5, 6.8, 7]);
+    expect(d.nota4).toBe(5.5);
+    expect(d.mediaFinal).toBe(6.4);
+
+    const [pss] = montarDisciplinas(
+      [
+        {
+          IDTURMADISC: 11,
+          CODTURMA: "ESW-N",
+          CODDISC: "PSS",
+          DISCIPLINA: "PROGRAMAÇÃO SERVER-SIDE - PSS",
+          SITUACAO: "Aprovado",
+          "1 - Nota 1": "7,3",
+          "2 - Nota 2": "6,0",
+          "3 - Nota 3": "7,0",
+          "4 - Nota Substitutiva": "8,4",
+          "6 - Média Final": "7,6",
+        },
+      ],
+      [],
+    );
+    expect(pss.nota4).toBe(8.4);
+    const analisePss = analisar(pss);
+    expect(analisePss.notasEfetivas).toEqual([7.3, 8.4, 7]);
+    expect(analisePss.indiceSubstituido).toBe(1);
+    expect(analisePss.notaSubstituida).toBe(6);
+    expect(analisePss.soma).toBeCloseTo(22.7, 5);
+    expect(analisePss.media).toBe(7.6);
+    expect(analisePss.situacao.id).toBe("aprovada");
   });
 });
 
@@ -180,12 +281,13 @@ describe("cookie de sessão", () => {
     expect(podeLembrar()).toBe(false);
   });
 
-  it("cifra, abre, expira e rejeita adulteração", () => {
+  it("cifra com HKDF+AAD, expira em 7 dias e rejeita adulteração", () => {
     process.env.SESSAO_SEGREDO = "a".repeat(48);
     const selo = selar(c, 1000)!;
     expect(selo).not.toContain("segredo");
     expect(abrir(selo, 2000)).toEqual(c);
-    expect(abrir(selo, 1000 + 31 * 86_400_000)).toBeNull();
+    expect(abrir(selo, 1000 + 6 * 86_400_000)).toEqual(c);
+    expect(abrir(selo, 1000 + 8 * 86_400_000)).toBeNull();
     const adulterado = selo.slice(0, -2) + (selo.endsWith("A") ? "B" : "A") + selo.slice(-1);
     expect(abrir(adulterado, 2000)).toBeNull();
     // Dois selos da mesma senha são diferentes (IV aleatório).
@@ -197,19 +299,114 @@ describe("cookie de sessão", () => {
 });
 
 describe("proteções das rotas", () => {
+  beforeEach(() => limparTentativas());
+
   const req = (headers: Record<string, string>) =>
     new Request("http://site.test/api/entrar", { method: "POST", headers });
 
-  it("só aceita a própria origem", () => {
+  it("só aceita a própria origem e bloqueia Sec-Fetch-Site externo", () => {
     expect(mesmaOrigem(req({ origin: "https://site.test", host: "site.test" }))).toBe(true);
+    expect(
+      mesmaOrigem(
+        req({
+          origin: "https://site.test",
+          "x-forwarded-host": "site.test, proxy.internal",
+          "sec-fetch-site": "same-origin",
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      mesmaOrigem(
+        req({
+          origin: "https://site.test",
+          host: "site.test",
+          "sec-fetch-site": "cross-site",
+        }),
+      ),
+    ).toBe(false);
     expect(mesmaOrigem(req({ origin: "https://outro.test", host: "site.test" }))).toBe(false);
     expect(mesmaOrigem(req({ host: "site.test" }))).toBe(false);
+    expect(mesmaOrigem(req({ origin: "http://localhost:3000", host: "localhost:3000" }))).toBe(true);
+
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      expect(mesmaOrigem(req({ origin: "http://localhost:3000", host: "localhost:3000" }))).toBe(
+        true,
+      );
+      expect(mesmaOrigem(req({ origin: "http://127.0.0.1:3000", host: "127.0.0.1:3000" }))).toBe(
+        true,
+      );
+      expect(mesmaOrigem(req({ origin: "http://site.test", host: "site.test" }))).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
-  it("limita tentativas por IP", () => {
+  it("limita tentativas por IP e não reseta bloqueios com 5000 IPs forjados", () => {
     const r = req({ "x-forwarded-for": "203.0.113.9" });
     for (let i = 0; i < 8; i++) expect(dentroDoLimite(r, 1000)).toBe(true);
     expect(dentroDoLimite(r, 1000)).toBe(false);
+
+    for (let i = 0; i < 5005; i++) {
+      dentroDoLimite(req({ "x-forwarded-for": `198.51.${Math.floor(i / 256)}.${i % 256}` }), 1001);
+    }
+    expect(dentroDoLimite(r, 1002)).toBe(false);
     expect(dentroDoLimite(r, 1000 + 6 * 60_000)).toBe(true);
+  });
+
+  it("limita força bruta distribuída por conta", () => {
+    for (let i = 0; i < 8; i++) expect(dentroDoLimiteConta("Aluno.Teste", 1000)).toBe(true);
+    expect(dentroDoLimiteConta("aluno.teste", 1000)).toBe(false);
+    expect(dentroDoLimiteConta("aluno.teste", 1000 + 6 * 60_000)).toBe(true);
+  });
+
+  it("rejeita payloads maiores que maxBytes no stream sem ler tudo", async () => {
+    const grande = new Request("http://site.test/api/entrar", {
+      method: "POST",
+      body: JSON.stringify({ usuario: "a".repeat(5000) }),
+    });
+    expect(await lerCorpo(grande, 4096)).toBeNull();
+
+    let chunksLidos = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        chunksLidos++;
+        ctrl.enqueue(new Uint8Array(1500).fill(97));
+        if (chunksLidos >= 10) ctrl.close();
+      },
+    });
+    const reqStream = new Request("http://site.test/api/entrar", {
+      method: "POST",
+      body: stream,
+      duplex: "half",
+    } as RequestInit);
+    expect(await lerCorpo(reqStream, 4096)).toBeNull();
+    expect(chunksLidos).toBeLessThan(5);
+
+    const valido = new Request("http://site.test/api/entrar", {
+      method: "POST",
+      body: JSON.stringify({ usuario: "aluno" }),
+    });
+    expect(await lerCorpo(valido, 4096)).toEqual({ usuario: "aluno" });
+  });
+
+  it("extrairPular valida formato, tamanho e limite de 40 períodos", () => {
+    expect([...extrairPular(null)]).toEqual([]);
+    expect([...extrairPular({ pular: "202511" })]).toEqual([]);
+    expect([
+      ...extrairPular({
+        pular: [
+          "202511",
+          "2025-2_A",
+          "../invalido",
+          "muito-longo-demais-12345",
+          123,
+          null,
+        ],
+      }),
+    ]).toEqual(["202511", "2025-2_A"]);
+
+    const muitos = Array.from({ length: 50 }, (_, i) => `2025${String(i).padStart(2, "0")}`);
+    expect(extrairPular({ pular: muitos }).size).toBe(40);
   });
 });

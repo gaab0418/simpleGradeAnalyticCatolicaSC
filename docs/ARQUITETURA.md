@@ -63,25 +63,22 @@ atualização normal consulta só o semestre em andamento.
 
 | Dado | Onde | Por quê |
 |---|---|---|
-| Senha (com "Manter conectado") | Cookie `HttpOnly; Secure; SameSite=Strict; Path=/api`, cifrado com AES-256-GCM | JavaScript da página não lê (XSS não rouba a senha); o servidor não guarda nada |
+| Senha (com "Manter conectado") | Cookie `__Secure-boletim_sessao` (`HttpOnly; Secure; SameSite=Strict; Path=/api`), cifrado com AES-256-GCM (HKDF + AAD), válido por 7 dias | JavaScript da página não lê (XSS não rouba a senha); o servidor não guarda nada |
 | Senha (sem "Manter conectado") | Em lugar nenhum | Só existe durante a requisição de login |
-| Notas e faltas | `localStorage` (ou `sessionStorage` sem "Manter conectado") | Abre rápido, funciona offline, o servidor não vê depois de entregar |
+| Notas e faltas | `localStorage` com expiração de 7 dias (ou `sessionStorage` sem "Manter conectado") | Abre rápido, funciona offline, expira automaticamente e o servidor não vê depois de entregar |
 | Tema | `localStorage` | Preferência |
 
-A chave do cookie é `SESSAO_SEGREDO` (variável de ambiente, mínimo 32 caracteres). Sem ela
-o site funciona, mas não oferece manter o login — melhor recusar do que cifrar com chave fraca.
+A chave do cookie é derivada via HKDF (SHA-256) a partir de `SESSAO_SEGREDO` (variável de ambiente, mínimo 32 caracteres). Sem ela o site funciona, mas não oferece manter o login — melhor recusar do que cifrar com chave fraca.
 
 ### Defesas
 
-- **Host fixo do portal** e redirecionamento seguido manualmente: se o portal redirecionar
-  para outro domínio a requisição é abortada, então a credencial nunca sai do host configurado.
-- **Origem**: as rotas só aceitam `Origin` igual ao próprio host (bloqueia CSRF e o uso do
-  site como proxy por outras páginas).
-- **Limite de tentativas** por IP (8 a cada 5 minutos). É por instância serverless: reduz
-  abuso, não elimina. O bloqueio real contra força bruta é o do próprio portal.
-- **Cabeçalhos**: CSP restrita à própria origem, `frame-ancestors 'none'`, `no-referrer`,
-  `no-store` em todas as respostas de API.
+- **Host fixo e HTTPS no portal**: redirecionamento seguido manualmente e abortado se mudar de origem; em produção exige protocolo HTTPS e valida/sanitiza cookies e tamanho de resposta (máx. 2 MB).
+- **Origem**: as rotas só aceitam `Origin` igual ao próprio host (exigindo HTTPS em produção e bloqueando `Sec-Fetch-Site` diferente de `same-origin`).
+- **Limite de tentativas** por IP e por conta (8 a cada 5 minutos), com limite real de leitura de stream (`4096` bytes) e evicção segura que preserva bloqueios ativos. Em serverless reduz abuso por instância; o bloqueio definitivo continua sendo o do próprio portal.
+- **Cabeçalhos**: CSP restrita à própria origem (`upgrade-insecure-requests` em produção), `Strict-Transport-Security`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin`, `frame-ancestors 'none'`, `no-referrer`, `no-store` em todas as respostas de API.
 - **Sem terceiros**: nenhuma fonte, script, analytics ou imagem de fora.
+
+Detalhes completos da análise de vulnerabilidades e medidas de mitigação em [`docs/SEGURANCA.md`](./SEGURANCA.md).
 
 ### Limites que continuam existindo
 

@@ -56,6 +56,13 @@ class BoletimPage extends StatelessWidget {
                 ),
               ),
               IconButton(
+                tooltip: 'Sincronizar todos os semestres',
+                onPressed: app.sincronizando
+                    ? null
+                    : () => app.sincronizar(completo: true),
+                icon: const Icon(Icons.history_rounded),
+              ),
+              IconButton(
                 tooltip: 'Buscar notas de novo no portal',
                 onPressed: app.sincronizando ? null : app.sincronizar,
                 icon: app.sincronizando
@@ -140,7 +147,18 @@ class BoletimPage extends StatelessWidget {
               acao: 'Ok',
               aoAgir: app.dispensarNovidades,
             ),
-          if (resumo.recado.isNotEmpty) Aviso(resumo.recado, cor: c.acento),
+          if (resumo.recado.isNotEmpty)
+            Aviso(resumo.recado, cor: c.acento, etiqueta: 'Foco'),
+          _IndicadoresBoletim(
+            garantidas: resumo.garantidas,
+            materias: resumo.materias,
+            emAberto: materias
+                .where((m) => !m.situacao.passou && !m.situacao.encerrada)
+                .length,
+            semNota: resumo.semNota,
+            faltas: resumo.faltas,
+          ),
+          const SizedBox(height: 16),
           if (materias.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),
@@ -160,9 +178,141 @@ class BoletimPage extends StatelessWidget {
             ),
           const SizedBox(height: 8),
           Text(
-            'Em cada nota que falta aparece o mínimo que você precisa tirar. Toque na matéria para simular.',
+            'Notas precedidas por ≥ mostram o mínimo necessário em cada prova para fechar média ${fmt(notaMinimaAprovacao)}. Toque na matéria para simular.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: c.texto2),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IndicadoresBoletim extends StatelessWidget {
+  const _IndicadoresBoletim({
+    required this.garantidas,
+    required this.materias,
+    required this.emAberto,
+    required this.semNota,
+    required this.faltas,
+  });
+
+  final int garantidas;
+  final int materias;
+  final int emAberto;
+  final int semNota;
+  final int faltas;
+
+  @override
+  Widget build(BuildContext context) {
+    final itens = [
+      _IndicadorCard(
+        rotulo: 'Garantidas',
+        valor: '$garantidas',
+        sufixo: ' de $materias',
+      ),
+      _IndicadorCard(rotulo: 'Em aberto', valor: '$emAberto'),
+      _IndicadorCard(rotulo: 'Sem nota ainda', valor: '$semNota'),
+      _IndicadorCard(
+        rotulo: 'Faltas no semestre',
+        valor: '$faltas',
+        sufixo: ' ${faltas == 1 ? 'aula' : 'aulas'} · ${dias(faltas)}',
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 520) {
+          return Row(
+            children: [
+              for (var i = 0; i < itens.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(child: itens[i]),
+              ],
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(child: itens[0]),
+                const SizedBox(width: 8),
+                Expanded(child: itens[1]),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: itens[2]),
+                const SizedBox(width: 8),
+                Expanded(child: itens[3]),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _IndicadorCard extends StatelessWidget {
+  const _IndicadorCard({
+    required this.rotulo,
+    required this.valor,
+    this.sufixo,
+  });
+
+  final String rotulo;
+  final String valor;
+  final String? sufixo;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: c.superficie,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            rotulo,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: c.texto2),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(
+              TextSpan(
+                text: valor,
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                  color: c.texto,
+                  letterSpacing: -0.4,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+                children: [
+                  if (sufixo != null)
+                    TextSpan(
+                      text: sufixo,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: c.texto2,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
