@@ -87,9 +87,11 @@ const registros = (v: unknown): Registro[] =>
 
 /** Extrai N4 (substitutiva/recuperação), ignorando colunas de média como "4 - Média Final". */
 export function extrairNota4(n: Registro): number | null {
-  if ("4 - Nota 4" in n) {
-    const direta = parseNota(n["4 - Nota 4"]);
-    if (direta !== null) return direta;
+  for (const chave of ["4 - Nota Substitutiva", "4 - Nota 4"]) {
+    if (chave in n) {
+      const direta = parseNota(n[chave]);
+      if (direta !== null) return direta;
+    }
   }
   for (const [chave, valor] of Object.entries(n)) {
     if (/^4\s*-\s*(?!\s*m[eé]dia)/i.test(chave)) {

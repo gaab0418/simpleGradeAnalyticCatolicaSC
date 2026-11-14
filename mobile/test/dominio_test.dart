@@ -227,6 +227,17 @@ void main() {
             '4 - Recuperação': '7,0',
             '4 - Média': '5,0',
           },
+          {
+            'IDTURMADISC': 79,
+            'CODTURMA': 'T',
+            'CODDISC': 'X3',
+            'DISCIPLINA': 'ESTRUTURAS - ED',
+            'SITUACAO': 'Aprovado',
+            '1 - Nota 1': '3,0',
+            '2 - Nota 2': '7,0',
+            '3 - Nota 3': '7,0',
+            '4 - Nota Substitutiva': '8,4',
+          },
         ],
         [
           {'IDTURMADISC': 77, '1 - Faltas Sala de Aula': '8'},
@@ -238,6 +249,7 @@ void main() {
       expect(ds.first.faltas, 8);
       expect(ds.first.chave, '77');
       expect(ds[1].nota4, 7.0);
+      expect(ds[2].nota4, 8.4);
     });
   });
 

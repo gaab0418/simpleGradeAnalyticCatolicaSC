@@ -3,6 +3,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { analisar } from "@/lib/dominio/regras";
 import {
   dentroDoLimite,
   dentroDoLimiteConta,
@@ -240,6 +241,32 @@ describe("cliente do portal", () => {
     expect(d.notas).toEqual([3.5, 6.8, 7]);
     expect(d.nota4).toBe(5.5);
     expect(d.mediaFinal).toBe(6.4);
+
+    const [pss] = montarDisciplinas(
+      [
+        {
+          IDTURMADISC: 11,
+          CODTURMA: "ESW-N",
+          CODDISC: "PSS",
+          DISCIPLINA: "PROGRAMAÇÃO SERVER-SIDE - PSS",
+          SITUACAO: "Aprovado",
+          "1 - Nota 1": "7,3",
+          "2 - Nota 2": "6,0",
+          "3 - Nota 3": "7,0",
+          "4 - Nota Substitutiva": "8,4",
+          "6 - Média Final": "7,6",
+        },
+      ],
+      [],
+    );
+    expect(pss.nota4).toBe(8.4);
+    const analisePss = analisar(pss);
+    expect(analisePss.notasEfetivas).toEqual([7.3, 8.4, 7]);
+    expect(analisePss.indiceSubstituido).toBe(1);
+    expect(analisePss.notaSubstituida).toBe(6);
+    expect(analisePss.soma).toBeCloseTo(22.7, 5);
+    expect(analisePss.media).toBe(7.6);
+    expect(analisePss.situacao.id).toBe("aprovada");
   });
 });
 

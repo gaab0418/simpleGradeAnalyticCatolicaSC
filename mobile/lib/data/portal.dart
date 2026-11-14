@@ -89,9 +89,11 @@ Aluno alunoDoJson(Object? data) {
 final _chaveNota4 = RegExp(r'^4\s*-\s*(?!m[eé]dia)', caseSensitive: false);
 
 double? _extrairNota4(Map n) {
-  if (n.containsKey('4 - Nota 4')) {
-    final direta = parseNota(n['4 - Nota 4']);
-    if (direta != null) return direta;
+  for (final chave in const ['4 - Nota Substitutiva', '4 - Nota 4']) {
+    if (n.containsKey(chave)) {
+      final v = parseNota(n[chave]);
+      if (v != null) return v;
+    }
   }
   for (final entry in n.entries) {
     final k = entry.key?.toString() ?? '';

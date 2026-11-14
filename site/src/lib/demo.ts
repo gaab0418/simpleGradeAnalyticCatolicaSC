@@ -25,7 +25,7 @@ export function historicoDemo(agora = new Date()): Historico {
       nome: `${nome.toUpperCase()} - ${sigla}`,
       situacao: media === null ? "Matriculado" : media >= 6 ? "Aprovado" : "Reprovado",
       notas,
-      ...(nota4 !== null ? { nota4 } : {}),
+      nota4,
       mediaFinal: media,
       faltas,
     };

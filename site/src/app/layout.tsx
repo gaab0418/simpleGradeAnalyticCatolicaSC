@@ -31,16 +31,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
-        <footer>
-          <div className="conteudo">
+        <footer className="border-t border-border bg-card py-5 pb-6 text-[13px] text-texto-3">
+          <div className="mx-auto flex w-full max-w-[1060px] flex-wrap justify-between gap-x-5 gap-y-1.5 px-4 md:px-5">
             <span>
               Projeto de estudantes, sem vínculo com a {instituicao.nome} ou a TOTVS. Uso apenas
               para estudo.
             </span>
             <span>
-              <Link href="/privacidade">Privacidade e funcionamento</Link>
+              <Link href="/privacidade" className="text-muted-foreground underline hover:text-foreground">
+                Privacidade e funcionamento
+              </Link>
               {" · "}
-              <a href="https://github.com/gaab0418/simpleGradeAnalyticCatolicaSC" rel="noopener">
+              <a
+                href="https://github.com/gaab0418/simpleGradeAnalyticCatolicaSC"
+                rel="noopener"
+                className="text-muted-foreground underline hover:text-foreground"
+              >
                 Código-fonte
               </a>
             </span>

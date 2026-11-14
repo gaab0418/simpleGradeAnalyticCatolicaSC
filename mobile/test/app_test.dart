@@ -307,6 +307,26 @@ void main() {
     );
     expect(find.text('Probabilidade e Estatística'), findsOneWidget);
     expect(find.byType(BlocoN4), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Tooltip &&
+            w.message == 'N4 substitutiva: 5,5 no lugar da N1 (3,5)',
+      ),
+      findsOneWidget,
+    );
+    await t.tap(find.byType(BlocoN4));
+    await t.pump();
+    expect(
+      find.text('N4 substitutiva: 5,5 no lugar da N1 (3,5)'),
+      findsOneWidget,
+    );
+    await t.tap(find.text('Probabilidade e Estatística'));
+    await t.pumpAndSettle();
+    expect(
+      find.text('N4 substitutiva: tirou 5,5, substituindo a N1 (3,5).'),
+      findsOneWidget,
+    );
 
     await t.tap(find.text('Desempenho'));
     await t.pumpAndSettle();

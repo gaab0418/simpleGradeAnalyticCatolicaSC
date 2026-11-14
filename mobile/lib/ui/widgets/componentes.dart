@@ -177,11 +177,13 @@ class BlocoN4 extends StatelessWidget {
     super.key,
     required this.notaAntiga,
     required this.notaN4,
+    this.etapa,
     this.simulada = false,
   });
 
-  final double notaAntiga;
+  final double? notaAntiga;
   final double notaN4;
+  final String? etapa;
   final bool simulada;
 
   @override
@@ -194,41 +196,26 @@ class BlocoN4 extends StatelessWidget {
     final fundoSelo = simulada
         ? c.acento.withValues(alpha: 0.14)
         : c.tons[Tom.calmo]!.fundo;
+    final originalTxt = notaAntiga != null ? fmt(notaAntiga!) : '–';
+    final mensagem =
+        'N4 substitutiva: ${fmt(notaN4)} no lugar da ${etapa ?? 'nota'} ($originalTxt)';
 
-    return FittedBox(
-      fit: BoxFit.scaleDown,
+    return Tooltip(
+      message: mensagem,
+      preferBelow: false,
+      verticalOffset: 18,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 3),
       child: SizedBox(
-        width: 68,
-        height: 38,
+        width: 56,
+        height: 34,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              left: 0,
-              top: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: c.superficie2,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  fmt(notaAntiga),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: c.texto3,
-                    decoration: TextDecoration.lineThrough,
-                    decorationColor: c.texto3,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 18,
-              top: 9,
-              right: 2,
+              left: 6,
+              top: 7,
+              right: 0,
               bottom: 0,
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -249,7 +236,7 @@ class BlocoN4 extends StatelessWidget {
                 ),
                 child: Center(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 3),
+                    padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       fmt(notaN4),
                       style: TextStyle(
@@ -265,7 +252,7 @@ class BlocoN4 extends StatelessWidget {
             ),
             Positioned(
               top: 0,
-              right: 0,
+              left: 0,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: fundoSelo,

@@ -124,6 +124,9 @@ type ArquivoPassado = Record<string, EntradaPassado>;
 
 const normalizarUsuario = (usuario: string) => usuario.trim().toLowerCase();
 
+const semestreComEsquemaN4 = (s: Semestre) =>
+  s.disciplinas.every((d) => "nota4" in d && d.nota4 !== undefined);
+
 function lerArquivoPassado(): ArquivoPassado {
   try {
     const bruto = localStorage.getItem(CHAVE_PASSADO);
@@ -161,7 +164,9 @@ function lerPassado(usuario: string): Semestre[] {
   const chave = normalizarUsuario(usuario);
   if (!chave) return [];
   const entrada = lerArquivoPassado()[chave];
-  return (entrada?.semestres ?? []).filter((s) => semestreConsolidado(s));
+  return (entrada?.semestres ?? []).filter(
+    (s) => semestreConsolidado(s) && semestreComEsquemaN4(s),
+  );
 }
 
 function salvarPassado(historico: Historico, usuario?: string | null) {
@@ -176,7 +181,7 @@ function salvarPassado(historico: Historico, usuario?: string | null) {
     if (!chave) return;
 
     const consolidados = ordenarSemestres(
-      historico.semestres.filter((s) => semestreConsolidado(s)),
+      historico.semestres.filter((s) => semestreConsolidado(s) && semestreComEsquemaN4(s)),
     );
     arquivo[chave] = {
       ra: historico.aluno.ra || arquivo[chave]?.ra || "",
@@ -255,7 +260,10 @@ export const acoes = {
       lembrado: salvo.lembrado,
     });
     const ultima = Math.max(0, ...salvo.historico.semestres.map((s) => Date.parse(s.atualizadoEm) || 0));
-    if (salvo.lembrado && Date.now() - ultima > VALIDADE_MS) void acoes.sincronizar();
+    const precisaMigrarN4 = salvo.historico.semestres.some((s) => !semestreComEsquemaN4(s));
+    if (salvo.lembrado && (Date.now() - ultima > VALIDADE_MS || precisaMigrarN4)) {
+      void acoes.sincronizar();
+    }
   },
 
   /** Devolve a mensagem de erro, ou `null` se entrou. */
@@ -317,7 +325,9 @@ export const acoes = {
     try {
       const pular = completo
         ? []
-        : anterior.semestres.filter((s) => semestreConsolidado(s)).map((s) => s.codigo);
+        : anterior.semestres
+            .filter((s) => semestreConsolidado(s) && semestreComEsquemaN4(s))
+            .map((s) => s.codigo);
       const historico = mesclar(
         anterior,
         await chamar("/api/sincronizar", { pular, ...(sessaoMemoria ?? {}) }),

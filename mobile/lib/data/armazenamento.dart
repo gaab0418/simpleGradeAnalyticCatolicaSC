@@ -66,7 +66,7 @@ class Preferencias {
 
 class ArmazenamentoLocal {
   static const _kHistorico = 'historico.v1';
-  static const _kPassado = 'historico.passado.v1';
+  static const _kPassado = 'historico.passado.v2';
   static const _kTema = 'pref.tema';
   static const _kBiometria = 'pref.biometria';
 

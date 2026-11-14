@@ -202,8 +202,8 @@ export function GraficoEvolucao({ pontos }: { pontos: PontoEvolucao[] }) {
   );
 
   return (
-    <div className="grafico-caixa">
-      <div className="painel-grafico">
+    <div className="grid gap-1.5">
+      <div className="relative h-[232px] w-full">
         <Line
           data={data}
           options={options}
@@ -331,8 +331,8 @@ export function GraficoColunas({
   }, [referencia]);
 
   return (
-    <div className="grafico-caixa">
-      <div className="painel-grafico colunas">
+    <div className="grid gap-1.5">
+      <div className="relative h-[196px] w-full">
         <Bar
           data={data}
           options={options}

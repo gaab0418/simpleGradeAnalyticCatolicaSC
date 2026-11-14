@@ -292,7 +292,11 @@ class _MateriaCardState extends State<MateriaCard> {
         altura: alturaCelula,
         semantica:
             '$rotulo substituída pela N4: de ${fmt(a.notaSubstituida!)} para ${fmt(a.nota4!)}',
-        child: BlocoN4(notaAntiga: a.notaSubstituida!, notaN4: a.nota4!),
+        child: BlocoN4(
+          notaAntiga: a.notaSubstituida,
+          notaN4: a.nota4!,
+          etapa: rotulo,
+        ),
       );
     }
 
@@ -306,8 +310,9 @@ class _MateriaCardState extends State<MateriaCard> {
         semantica:
             '$rotulo simulada pela N4: de ${fmt(sim.notaSubstituida!)} para ${fmt(sim.nota4!)}',
         child: BlocoN4(
-          notaAntiga: sim.notaSubstituida!,
+          notaAntiga: sim.notaSubstituida,
           notaN4: sim.nota4!,
+          etapa: rotulo,
           simulada: true,
         ),
       );
@@ -414,23 +419,28 @@ class _Detalhes extends StatelessWidget {
         ? 'Nenhuma falta até agora. Dá para faltar até ${dias(a.faltasRestantes)} antes de reprovar.'
         : 'Você faltou ${dias(a.faltas)} (${a.faltas} aulas). Ainda pode faltar ${dias(a.faltasRestantes)} antes de reprovar.';
 
+    final n4Explicacao = a.indiceSubstituido != null && a.nota4 != null
+        ? 'N4 substitutiva: tirou ${fmt(a.nota4!)}, substituindo a N${a.indiceSubstituido! + 1} (${a.notaSubstituida != null ? fmt(a.notaSubstituida!) : '–'}).'
+        : null;
+
     final List<Widget> notas;
     if (!podeSimular || simulacao == null) {
-      final n4Info =
-          a.indiceSubstituido != null &&
-              a.notaSubstituida != null &&
-              a.nota4 != null
-          ? 'N4 (${fmt(a.nota4!)}) substituiu N${a.indiceSubstituido! + 1} (${fmt(a.notaSubstituida!)}). '
-          : '';
       notas = [
         const Text('Notas', style: h),
         const SizedBox(height: 6),
         Text(
           d.mediaFinal != null
-              ? '${n4Info}Média final ${fmt(d.mediaFinal!)}, situação no portal: ${d.situacao}.'
-              : '${n4Info}Todas as notas lançadas. Soma ${fmt(a.soma)} de ${somaAprovacao.toInt()}.',
+              ? 'Média final ${fmt(d.mediaFinal!)}, situação no portal: ${d.situacao}.'
+              : 'Todas as notas lançadas. Soma ${fmt(a.soma)} de ${somaAprovacao.toInt()}.',
           style: p,
         ),
+        if (n4Explicacao != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            n4Explicacao,
+            style: TextStyle(fontSize: 13.5, color: c.texto2, height: 1.4),
+          ),
+        ],
       ];
     } else {
       final sim = simulacao!;
@@ -466,6 +476,13 @@ class _Detalhes extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
+        if (n4Explicacao != null) ...[
+          Text(
+            n4Explicacao,
+            style: TextStyle(fontSize: 13.5, color: c.texto2, height: 1.4),
+          ),
+          const SizedBox(height: 8),
+        ],
         for (final MapEntry(key: i, value: v) in palpites.entries)
           Row(
             children: [

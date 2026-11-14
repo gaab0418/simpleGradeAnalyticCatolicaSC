@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { Button } from "@/componentes/ui/button";
+import { Card } from "@/componentes/ui/card";
+import { Skeleton } from "@/componentes/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/componentes/ui/tabs";
 import { acoes, useLoja } from "@/lib/cliente/loja";
 import { instituicao } from "@/lib/config";
 import { quando } from "@/lib/dominio/formato";
@@ -72,75 +76,105 @@ export function Aplicativo() {
 
   return (
     <>
-      <header className="topo">
-        <div className="conteudo">
-          <span className="marca">
+      <header className="sticky top-0 z-20 border-b border-border bg-card/88 backdrop-blur-md">
+        <div className="mx-auto flex min-h-[58px] w-full max-w-[1060px] flex-wrap items-center gap-x-4.5 gap-y-2 px-4 md:px-5">
+          <span className="flex items-center gap-2.5 font-bold tracking-tight [&_svg]:size-[22px] [&_svg]:shrink-0 [&_svg]:text-primary">
             <Logo />
             <span>
-              Boletim <small>{instituicao.nome}</small>
+              Boletim{" "}
+              <small className="hidden text-[13px] font-normal text-texto-3 sm:inline">
+                {instituicao.nome}
+              </small>
             </span>
           </span>
           {pronto && (
-            <nav className="abas" aria-label="Seções">
-              {(["boletim", "desempenho"] as const).map((aba) => (
-                <button
-                  key={aba}
-                  type="button"
-                  className="aba"
-                  aria-current={estado.aba === aba ? "page" : undefined}
-                  onClick={() => acoes.abrirAba(aba)}
-                >
-                  {aba === "boletim" ? "Boletim" : "Desempenho"}
-                </button>
-              ))}
-            </nav>
+            <Tabs
+              value={estado.aba}
+              onValueChange={(v) => acoes.abrirAba(v as "boletim" | "desempenho")}
+              className="order-3 mb-2 w-full md:order-none md:mb-0 md:w-auto"
+            >
+              <TabsList className="w-full md:w-auto" aria-label="Seções">
+                <TabsTrigger value="boletim" className="flex-1 md:flex-initial">
+                  Boletim
+                </TabsTrigger>
+                <TabsTrigger value="desempenho" className="flex-1 md:flex-initial">
+                  Desempenho
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           )}
-          <div className="acoes">
+          <div className="ml-auto flex items-center gap-1.5">
             {pronto && estado.lembrado && (
               <>
-                {ultima && <span className="atualizado">Atualizado {quando(ultima)}</span>}
-                <button
+                {ultima && (
+                  <span className="mr-1 hidden text-xs text-texto-3 md:inline">
+                    Atualizado {quando(ultima)}
+                  </span>
+                )}
+                <Button
                   type="button"
-                  className={`botao botao-atualizar${estado.ocupado ? " girando" : ""}`}
+                  variant="outline"
+                  className={
+                    estado.ocupado
+                      ? "max-[520px]:size-9 max-[520px]:p-0 [&_svg]:animate-spin"
+                      : "max-[520px]:size-9 max-[520px]:p-0"
+                  }
                   onClick={() => acoes.sincronizar()}
                   disabled={estado.ocupado}
                   title="Busca as notas do semestre atual no portal"
                   aria-label="Atualizar notas do semestre atual"
                 >
                   <IconeAtualizar />
-                  <span className="rotulo-acao">{estado.ocupado ? "Atualizando…" : "Atualizar"}</span>
-                </button>
-                <button
+                  <span className="max-[520px]:hidden">
+                    {estado.ocupado ? "Atualizando…" : "Atualizar"}
+                  </span>
+                </Button>
+                <Button
                   type="button"
-                  className="botao icone"
+                  variant="outline"
+                  size="icon"
                   onClick={() => acoes.sincronizar(true)}
                   disabled={estado.ocupado}
                   title="Rebaixar histórico: atualiza também todos os semestres já encerrados"
                   aria-label="Rebaixar histórico completo de todos os semestres"
                 >
                   <IconeHistorico />
-                </button>
+                </Button>
               </>
             )}
-            <div className="tema-grupo" role="group" aria-label="Aparência">
-              {OPCOES_TEMA.map((op) => (
-                <button
-                  key={op.id}
-                  type="button"
-                  className="tema-btn"
-                  aria-pressed={tema === op.id}
-                  aria-label={op.rotulo}
-                  title={op.rotulo}
-                  onClick={() => definirTema(op.id)}
-                >
-                  {op.icone}
-                </button>
-              ))}
+            <div
+              className="inline-flex h-9 items-center rounded-lg border border-borda-forte bg-card p-0.5"
+              role="group"
+              aria-label="Aparência"
+            >
+              {OPCOES_TEMA.map((op) => {
+                const ativo = tema === op.id;
+                return (
+                  <Button
+                    key={op.id}
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={
+                      ativo
+                        ? "h-[30px] w-7 rounded-md bg-secondary text-foreground [&_svg]:size-[15px]"
+                        : "h-[30px] w-7 rounded-md text-texto-3 [&_svg]:size-[15px]"
+                    }
+                    aria-pressed={ativo}
+                    aria-label={op.rotulo}
+                    title={op.rotulo}
+                    onClick={() => definirTema(op.id)}
+                  >
+                    {op.icone}
+                  </Button>
+                );
+              })}
             </div>
             {pronto && (
-              <button
+              <Button
                 type="button"
-                className="botao icone"
+                variant="outline"
+                size="icon"
                 onClick={() => {
                   if (
                     estado.demo ||
@@ -153,13 +187,13 @@ export function Aplicativo() {
                 title={estado.demo ? "Sair da demonstração" : "Sair e apagar dados"}
               >
                 <IconeSair />
-              </button>
+              </Button>
             )}
           </div>
         </div>
       </header>
 
-      <main>
+      <main className="flex-1 pt-5 pb-12 md:pt-7">
         {estado.fase === "carregando" && <Esqueleto />}
         {estado.fase === "deslogado" && <Entrada />}
         {pronto && (estado.aba === "boletim" ? <Boletim /> : <Desempenho />)}
@@ -170,28 +204,37 @@ export function Aplicativo() {
 
 function Esqueleto() {
   return (
-    <div className="conteudo esqueleto" aria-busy="true">
-      <span className="so-leitor">Carregando boletim…</span>
-      <div className="esq-cabecalho">
-        <span className="esq-bloco" style={{ width: "42%", height: 28 }} />
-        <span className="esq-bloco" style={{ width: "26%", height: 16 }} />
+    <div className="mx-auto w-full max-w-[1060px] px-4 md:px-5" aria-busy="true">
+      <span className="sr-only">Carregando boletim…</span>
+      <div className="mb-5 grid gap-2">
+        <Skeleton className="h-7 w-[42%]" />
+        <Skeleton className="h-4 w-[26%]" />
       </div>
-      <div className="indicadores">
+      <Card className="mb-4 grid grid-cols-2 overflow-hidden md:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <div className="indicador" key={i}>
-            <span className="esq-bloco" style={{ width: "55%", height: 12 }} />
-            <span className="esq-bloco" style={{ width: "40%", height: 24, marginTop: 8 }} />
+          <div
+            key={i}
+            className={[
+              "border-border px-4 py-3 md:px-5 md:py-3.5",
+              i % 2 === 1 ? "border-l" : i > 0 ? "md:border-l" : "",
+              i >= 2 ? "max-md:border-t" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <Skeleton className="h-3 w-[55%]" />
+            <Skeleton className="mt-2 h-6 w-[40%]" />
           </div>
         ))}
-      </div>
-      <div className="painel">
+      </Card>
+      <Card className="divide-y divide-border overflow-hidden">
         {["48%", "36%", "56%", "40%"].map((largura, i) => (
-          <div className="esq-linha" key={i}>
-            <span className="esq-bloco" style={{ width: largura, height: 15 }} />
-            <span className="esq-bloco" style={{ width: 88, height: 22 }} />
+          <div key={i} className="flex items-center justify-between gap-4 px-5 py-4">
+            <Skeleton className="h-[15px]" style={{ width: largura }} />
+            <Skeleton className="h-[22px] w-[88px]" />
           </div>
         ))}
-      </div>
+      </Card>
     </div>
   );
 }
