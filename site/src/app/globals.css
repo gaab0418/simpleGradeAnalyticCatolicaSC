@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-tema="escuro"], [data-tema="escuro"] *));
+
+/* Tokens semânticos. O app mobile compartilha os mesmos conceitos (mobile/lib/core/theme.dart). */
+:root {
+  --fundo: #f5f4ef;
+  --grade-bg: rgba(24, 34, 56, 0.028);
+  --superficie: #ffffff;
+  --superficie-2: #eeede6;
+  --borda: #dfddd3;
+  --borda-forte: #c6c3b5;
+  --texto: #16181d;
+  --texto-2: #555863;
+  --texto-3: #7b7f8c;
+  --acento: #1d4ed8;
+  --acento-suave: rgba(29, 78, 216, 0.08);
+  --acento-texto: #ffffff;
+
+  --ok: #17753f;
+  --ok-fundo: #e3f4e9;
+  --calmo: #1f5fae;
+  --calmo-fundo: #e4eefb;
+  --atencao: #8a5a00;
+  --atencao-fundo: #fbf0d0;
+  --apertado: #b0460b;
+  --apertado-fundo: #fde8d8;
+  --critico: #b3261e;
+  --critico-fundo: #fbe4e2;
+  --neutro: #555863;
+  --neutro-fundo: #ecebe4;
+
+  --raio: 8px;
+  --raio-g: 12px;
+  --largura: 1060px;
+
+  /* Mapeamento para tokens shadcn/ui */
+  --background: var(--fundo);
+  --foreground: var(--texto);
+  --card: var(--superficie);
+  --card-foreground: var(--texto);
+  --popover: var(--superficie);
+  --popover-foreground: var(--texto);
+  --primary: var(--acento);
+  --primary-foreground: var(--acento-texto);
+  --secondary: var(--superficie-2);
+  --secondary-foreground: var(--texto);
+  --muted: var(--superficie-2);
+  --muted-foreground: var(--texto-2);
+  --accent: var(--superficie-2);
+  --accent-foreground: var(--texto);
+  --destructive: var(--critico);
+  --destructive-foreground: #ffffff;
+  --border: var(--borda);
+  --input: var(--borda-forte);
+  --ring: var(--acento);
+  --radius: 0.5rem;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    --fundo: #111315;
+    --grade-bg: rgba(255, 255, 255, 0.025);
+    --superficie: #171a1e;
+    --superficie-2: #1f2329;
+    --borda: #2a2f37;
+    --borda-forte: #414854;
+    --texto: #eef0f2;
+    --texto-2: #a3a8b4;
+    --texto-3: #7b808d;
+    --acento: #8ab0ff;
+    --acento-suave: rgba(138, 176, 255, 0.12);
+    --acento-texto: #0b1020;
+    --ok: #6fd69a;
+    --ok-fundo: #16301f;
+    --calmo: #8fbcf5;
+    --calmo-fundo: #16273d;
+    --atencao: #e8bf5a;
+    --atencao-fundo: #33290f;
+    --apertado: #f39a62;
+    --apertado-fundo: #3a2114;
+    --critico: #f58a82;
+    --critico-fundo: #3d1a18;
+    --neutro: #a3a8b4;
+    --neutro-fundo: #242830;
+    --destructive-foreground: #0b1020;
+    color-scheme: dark;
+  }
+}
+
+:root[data-tema="escuro"] {
+  --fundo: #111315;
+  --grade-bg: rgba(255, 255, 255, 0.025);
+  --superficie: #171a1e;
+  --superficie-2: #1f2329;
+  --borda: #2a2f37;
+  --borda-forte: #414854;
+  --texto: #eef0f2;
+  --texto-2: #a3a8b4;
+  --texto-3: #7b808d;
+  --acento: #8ab0ff;
+  --acento-suave: rgba(138, 176, 255, 0.12);
+  --acento-texto: #0b1020;
+  --ok: #6fd69a;
+  --ok-fundo: #16301f;
+  --calmo: #8fbcf5;
+  --calmo-fundo: #16273d;
+  --atencao: #e8bf5a;
+  --atencao-fundo: #33290f;
+  --apertado: #f39a62;
+  --apertado-fundo: #3a2114;
+  --critico: #f58a82;
+  --critico-fundo: #3d1a18;
+  --neutro: #a3a8b4;
+  --neutro-fundo: #242830;
+  --destructive-foreground: #0b1020;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-borda-forte: var(--borda-forte);
+  --color-texto-3: var(--texto-3);
+  --color-acento-suave: var(--acento-suave);
+  --color-ok: var(--ok);
+  --color-ok-fundo: var(--ok-fundo);
+  --color-calmo: var(--calmo);
+  --color-calmo-fundo: var(--calmo-fundo);
+  --color-atencao: var(--atencao);
+  --color-atencao-fundo: var(--atencao-fundo);
+  --color-apertado: var(--apertado);
+  --color-apertado-fundo: var(--apertado-fundo);
+  --color-critico: var(--critico);
+  --color-critico-fundo: var(--critico-fundo);
+  --color-neutro: var(--neutro);
+  --color-neutro-fundo: var(--neutro-fundo);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --animate-revelar-nota: revelarNota 0.45s cubic-bezier(0.3, 0, 0.2, 1) both;
+  --animate-abrir-detalhe: abrirDetalhe 0.18s ease-out;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply min-h-dvh flex flex-col bg-background text-foreground text-[15px] leading-relaxed antialiased;
+    background-image:
+      linear-gradient(var(--grade-bg) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grade-bg) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  a {
+    @apply text-primary underline-offset-2;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--acento);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes revelarNota {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes abrirDetalhe {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
