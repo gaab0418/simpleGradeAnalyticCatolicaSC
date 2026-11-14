@@ -88,7 +88,13 @@ export function Boletim() {
       )}
       {!erro && !demo && !lembrado && (
         <div className="aviso">
-          <p>Você não está conectado: para atualizar as notas, saia e entre de novo.</p>
+          <p>
+            Mostrando as notas salvas neste navegador. Para buscar atualizações no portal, entre de
+            novo.
+          </p>
+          <button type="button" className="botao" onClick={acoes.sair}>
+            Entrar de novo
+          </button>
         </div>
       )}
       {novidades.length > 0 && (

@@ -1,12 +1,18 @@
 import { cookies } from "next/headers";
 import { baixarBoletim, respostaDeErro, SEM_CACHE } from "@/lib/servidor/boletim";
-import { dentroDoLimite, lerCorpo, mesmaOrigem } from "@/lib/servidor/protecao";
+import {
+  campoTexto,
+  dentroDoLimite,
+  dentroDoLimiteConta,
+  lerCorpo,
+  mesmaOrigem,
+} from "@/lib/servidor/protecao";
 import { COOKIE_SESSAO, abrir, opcoesCookie } from "@/lib/servidor/sessao";
 import { ErroPortal } from "@/lib/servidor/totvs";
 
 export const maxDuration = 60;
 
-/** Atualiza usando o cookie de sessão; `pular` lista semestres já encerrados no cache. */
+/** Atualiza usando o cookie de sessão ou credenciais da sessão ativa; `pular` lista semestres já encerrados no cache. */
 export async function POST(req: Request) {
   if (!mesmaOrigem(req)) {
     return Response.json({ erro: "Origem não permitida." }, { status: 403, headers: SEM_CACHE });
@@ -18,14 +24,27 @@ export async function POST(req: Request) {
     );
   }
   const jar = await cookies();
-  const credenciais = abrir(jar.get(COOKIE_SESSAO)?.value);
+  const corpo = await lerCorpo(req);
+  let credenciais = abrir(jar.get(COOKIE_SESSAO)?.value);
+  if (!credenciais) {
+    const usuario = campoTexto(corpo?.usuario)?.trim();
+    const senha = campoTexto(corpo?.senha);
+    if (usuario && senha) {
+      if (!dentroDoLimiteConta(usuario)) {
+        return Response.json(
+          { erro: "Muitas tentativas para esta conta. Espere alguns minutos e tente de novo.", tipo: "limite" },
+          { status: 429, headers: SEM_CACHE },
+        );
+      }
+      credenciais = { usuario, senha };
+    }
+  }
   if (!credenciais) {
     return Response.json(
       { erro: "Sua sessão expirou. Entre de novo.", tipo: "credenciais" },
       { status: 401, headers: SEM_CACHE },
     );
   }
-  const corpo = await lerCorpo(req);
   const pular = new Set(
     Array.isArray(corpo?.pular)
       ? corpo.pular

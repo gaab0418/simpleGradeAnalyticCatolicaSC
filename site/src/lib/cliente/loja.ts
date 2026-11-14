@@ -44,6 +44,9 @@ const inicial: Estado = {
 };
 
 let estado = inicial;
+let sessaoMemoria: { usuario: string; senha: string } | null = null;
+let temCookieServidor = false;
+let preferirLocal = false;
 const ouvintes = new Set<() => void>();
 
 function mudar(parcial: Partial<Estado>) {
@@ -89,10 +92,10 @@ function ler(): Salvo | null {
   return null;
 }
 
-function salvar(historico: Historico, lembrado: boolean) {
+function salvar(historico: Historico, lembrado: boolean, usarLocal = lembrado) {
   apagar();
   try {
-    (lembrado ? localStorage : sessionStorage).setItem(
+    (usarLocal ? localStorage : sessionStorage).setItem(
       CHAVE,
       JSON.stringify({ historico, lembrado, salvoEm: Date.now() } satisfies Salvo),
     );
@@ -169,6 +172,8 @@ export const acoes = {
     if (estado.fase !== "carregando") return;
     const salvo = ler();
     if (!salvo) return mudar({ fase: "deslogado" });
+    temCookieServidor = salvo.lembrado;
+    preferirLocal = salvo.lembrado;
     mudar({
       fase: "pronto",
       historico: salvo.historico,
@@ -185,15 +190,17 @@ export const acoes = {
     try {
       const r = await chamar("/api/entrar", { usuario, senha, lembrar });
       const historico = mesclar(null, r);
-      const lembrado = r.lembrado === true;
-      salvar(historico, lembrado);
+      temCookieServidor = r.lembrado === true;
+      preferirLocal = lembrar;
+      sessaoMemoria = { usuario: usuario.trim(), senha };
+      salvar(historico, temCookieServidor, preferirLocal);
       mudar({
         fase: "pronto",
         aba: "boletim",
         demo: false,
         historico,
         periodo: periodoInicial(historico),
-        lembrado,
+        lembrado: true,
         novidades: [],
       });
       return null;
@@ -205,6 +212,9 @@ export const acoes = {
   },
 
   entrarDemo() {
+    sessaoMemoria = null;
+    temCookieServidor = false;
+    preferirLocal = false;
     const historico = historicoDemo();
     mudar({
       fase: "pronto",
@@ -227,8 +237,11 @@ export const acoes = {
       const pular = completo
         ? []
         : anterior.semestres.filter(semestreEncerrado).map((s) => s.codigo);
-      const historico = mesclar(anterior, await chamar("/api/sincronizar", { pular }));
-      salvar(historico, true);
+      const historico = mesclar(
+        anterior,
+        await chamar("/api/sincronizar", { pular, ...(sessaoMemoria ?? {}) }),
+      );
+      salvar(historico, temCookieServidor, preferirLocal);
       mudar({
         historico,
         novidades: notasNovas(anterior, historico),
@@ -239,7 +252,11 @@ export const acoes = {
     } catch (e) {
       const erro = e instanceof ErroApi ? e : new ErroApi("Algo deu errado.", "portal");
       // Sessão inválida: o cookie já foi apagado pelo servidor.
-      if (erro.tipo === "credenciais") salvar(anterior, false);
+      if (erro.tipo === "credenciais") {
+        sessaoMemoria = null;
+        temCookieServidor = false;
+        salvar(anterior, false, preferirLocal);
+      }
       mudar({
         erro: { mensagem: erro.message, tipo: erro.tipo },
         lembrado: erro.tipo === "credenciais" ? false : estado.lembrado,
@@ -252,6 +269,9 @@ export const acoes = {
   /** Apaga o cookie de sessão e tudo o que está salvo neste navegador. */
   async sair() {
     const eraDemo = estado.demo;
+    sessaoMemoria = null;
+    temCookieServidor = false;
+    preferirLocal = false;
     apagar();
     mudar({ ...inicial, fase: "deslogado" });
     if (!eraDemo) {

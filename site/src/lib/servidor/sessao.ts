@@ -6,6 +6,7 @@
  */
 import "server-only";
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
+import { hostname } from "node:os";
 
 export const COOKIE_SESSAO =
   process.env.NODE_ENV === "production" ? "__Secure-boletim_sessao" : "boletim_sessao";
@@ -17,9 +18,17 @@ export interface Credenciais {
 }
 
 function chave(): Buffer | null {
-  const segredo = process.env.SESSAO_SEGREDO;
+  const configurado = process.env.SESSAO_SEGREDO;
   // Segredo curto = chave fraca; melhor recusar do que fingir segurança.
-  if (!segredo || segredo.length < 32) return null;
+  const segredo =
+    configurado && configurado.length > 0
+      ? configurado.length >= 32
+        ? configurado
+        : null
+      : process.env.NODE_ENV === "development"
+        ? `dev-local:${hostname()}:${process.cwd()}`
+        : null;
+  if (!segredo) return null;
   return Buffer.from(
     hkdfSync("sha256", segredo, "boletim-catolica-sc-salt-v1", "aes-256-gcm-sessao-v1", 32),
   );

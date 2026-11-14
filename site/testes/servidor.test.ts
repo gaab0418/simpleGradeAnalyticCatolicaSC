@@ -2,7 +2,7 @@
 // base64, redirecionamento, troca de período) e a cifra do cookie de sessão.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   dentroDoLimite,
   dentroDoLimiteConta,
@@ -270,6 +270,20 @@ describe("proteções das rotas", () => {
     ).toBe(false);
     expect(mesmaOrigem(req({ origin: "https://outro.test", host: "site.test" }))).toBe(false);
     expect(mesmaOrigem(req({ host: "site.test" }))).toBe(false);
+    expect(mesmaOrigem(req({ origin: "http://localhost:3000", host: "localhost:3000" }))).toBe(true);
+
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      expect(mesmaOrigem(req({ origin: "http://localhost:3000", host: "localhost:3000" }))).toBe(
+        true,
+      );
+      expect(mesmaOrigem(req({ origin: "http://127.0.0.1:3000", host: "127.0.0.1:3000" }))).toBe(
+        true,
+      );
+      expect(mesmaOrigem(req({ origin: "http://site.test", host: "site.test" }))).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("limita tentativas por IP e não reseta bloqueios com 5000 IPs forjados", () => {

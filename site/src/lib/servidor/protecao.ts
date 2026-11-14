@@ -15,7 +15,10 @@ export function mesmaOrigem(req: Request): boolean {
   if (!origem || !host) return false;
   try {
     const url = new URL(origem);
-    if (process.env.NODE_ENV === "production" && url.protocol !== "https:") return false;
+    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    if (process.env.NODE_ENV === "production" && !local && url.protocol !== "https:") {
+      return false;
+    }
     return url.host === host;
   } catch {
     return false;
