@@ -4,7 +4,7 @@ Notas, faltas e quanto falta para passar em cada matéria, a partir do portal ac
 TOTVS RM da Católica SC — com o histórico de todos os semestres e uma análise de desempenho
 ao longo do curso.
 
-Projeto de estudantes, **não oficial**, sem vínculo com a Católica SC ou a TOTVS.
+Projeto educacional feito **de estudante para estudante**, com o intuito de aprender a usar em um caso real as ferramentas e tecnologias disponíveis e vistas durante as aulas. Sistema **não oficial**, sem vínculo com a Católica SC ou a TOTVS e sem garantias — confira sempre o portal oficial ([termos de uso](TERMS.md)).
 
 | Pasta | O que é | Como rodar |
 |---|---|---|
@@ -44,13 +44,12 @@ Ninguém guarda a sua senha em servidor: o app fala direto com o portal; o site 
 repassar o login pelo próprio servidor (o portal não aceita chamadas de navegador), mas não
 grava nada. Detalhes e limites em [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
 
-## Licença
+## Termos de Uso, Isenção de Responsabilidade e Licença
 
-[PolyForm Noncommercial 1.0.0](LICENSE.md): pode usar, estudar, modificar e compartilhar
-para fins **não comerciais** (estudo, uso pessoal, pesquisa, ensino). Uso comercial não é
-permitido.
+Este sistema foi construído **de estudante para estudante** apenas com o intuito educacional de praticar, em um caso real, ferramentas e tecnologias vistas em aula. O projeto é fornecido **"no estado em que se encontra" (*as-is*)** e **o autor não se responsabiliza por nada** (eventuais divergências em notas, médias, substituições de N4, simulações, faltas, falhas de sincronização ou decisões acadêmicas). O Portal do Aluno oficial da Católica SC é a única fonte oficial. Leia os detalhes completos em [TERMS.md](TERMS.md).
+
+Sob a licença [PolyForm Noncommercial 1.0.0](LICENSE.md): pode usar, estudar, modificar e compartilhar para fins **não comerciais** (estudo, uso pessoal, pesquisa, ensino). Uso comercial não é permitido.
 
 Required Notice: Copyright (c) 2026 gaab0418 (https://github.com/gaab0418)
 
-A fonte Schibsted Grotesk é distribuída sob a SIL Open Font License (arquivos `OFL-*.txt`
-ao lado da fonte).
+A fonte Schibsted Grotesk é distribuída sob a SIL Open Font License (arquivos `OFL-*.txt` ao lado da fonte).

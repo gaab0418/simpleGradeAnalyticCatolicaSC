@@ -3,7 +3,9 @@ import Link from "next/link";
 import { instituicao } from "@/lib/config";
 import { Logo } from "@/componentes/icones";
 
-export const metadata: Metadata = { title: "Privacidade e funcionamento" };
+export const metadata: Metadata = { title: "Termos de uso, privacidade e funcionamento" };
+
+const REPO_URL = "https://github.com/gaab0418/simpleGradeAnalyticCatolicaSC";
 
 export default function Privacidade() {
   return (
@@ -27,13 +29,36 @@ export default function Privacidade() {
       <main className="flex-1 pt-5 pb-12 md:pt-7">
         <article className="mx-auto w-full max-w-[680px] space-y-4 px-4 md:px-5">
           <h1 className="text-[26px] font-bold leading-tight tracking-tight">
-            Privacidade e funcionamento
+            Termos de uso, privacidade e funcionamento
           </h1>
           <p>
             Este site mostra as suas notas e faltas do portal acadêmico da {instituicao.nome} de um
-            jeito mais fácil de ler. Ele é feito por estudantes, não é oficial e não tem vínculo
-            com a {instituicao.nome} nem com a TOTVS.
+            jeito mais fácil de ler. Ele é um projeto criado{" "}
+            <strong>de estudante para estudante</strong>, com o intuito educacional de aprender a
+            usar, em um caso real, as ferramentas e tecnologias disponíveis e vistas durante as
+            aulas — não é oficial e não tem vínculo com a {instituicao.nome} nem com a TOTVS.
           </p>
+
+          <h2 className="mt-4 text-[17px] font-semibold">
+            Termos de uso e isenção de responsabilidade
+          </h2>
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>
+              <strong>Finalidade de estudo:</strong> sistema sem fins lucrativos, disponibilizado
+              para consulta pessoal e prática acadêmica.
+            </li>
+            <li>
+              <strong>Sem garantias e sem responsabilidade:</strong> o site é fornecido “no estado
+              em que se encontra” (<em>as-is</em>). O autor{" "}
+              <strong>não se responsabiliza por nada</strong> decorrente do uso — incluindo
+              eventuais divergências em notas, médias, substituição da N4, simulações, contagem de
+              faltas, indisponibilidade do portal ou qualquer decisão acadêmica.
+            </li>
+            <li>
+              <strong>Fonte oficial:</strong> confira sempre as informações oficiais diretamente no
+              Portal do Aluno da {instituicao.nome}.
+            </li>
+          </ul>
 
           <h2 className="mt-4 text-[17px] font-semibold">O caminho da sua senha</h2>
           <ul className="list-disc space-y-1.5 pl-5">
@@ -82,6 +107,30 @@ export default function Privacidade() {
             <li>Anúncios, rastreadores ou ferramentas de análise de uso.</li>
             <li>Cadastro, conta própria ou qualquer dado guardado no servidor.</li>
           </ul>
+
+          <h2 className="mt-4 text-[17px] font-semibold">Licença de uso não comercial</h2>
+          <p>
+            O código-fonte é aberto sob a licença{" "}
+            <a
+              href={`${REPO_URL}/blob/main/LICENSE.md`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:brightness-110"
+            >
+              PolyForm Noncommercial 1.0.0
+            </a>{" "}
+            (permitido apenas uso pessoal, estudo e fins não comerciais). Os termos completos ficam
+            em{" "}
+            <a
+              href={`${REPO_URL}/blob/main/TERMS.md`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:brightness-110"
+            >
+              TERMS.md
+            </a>
+            .
+          </p>
 
           <p className="pt-2">
             <Link href="/" className="underline hover:brightness-110">

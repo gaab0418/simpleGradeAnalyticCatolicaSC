@@ -183,9 +183,11 @@ export function Entrada() {
                 </div>
               </dl>
               <p className="text-[13px] text-texto-3">
-                Projeto de estudantes, sem vínculo com a {instituicao.nome} ou a TOTVS.{" "}
+                Projeto de estudante para estudante para aprender em um caso real tecnologias vistas
+                em aula, sem vínculo com a {instituicao.nome} ou a TOTVS e sem responsabilidade sobre
+                os dados exibidos.{" "}
                 <Link href="/privacidade" className="underline hover:brightness-110">
-                  Privacidade e funcionamento
+                  Termos de uso e privacidade
                 </Link>
               </p>
             </CardContent>

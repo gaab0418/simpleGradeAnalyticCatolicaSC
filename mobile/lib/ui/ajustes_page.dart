@@ -138,10 +138,40 @@ class AjustesPage extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        Painel(
+          titulo: 'Termos de uso e licença',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sistema feito de estudante para estudante, com o intuito '
+                'educacional de aprender a usar em um caso real as ferramentas '
+                'e tecnologias vistas durante as aulas.',
+                style: legenda.copyWith(height: 1.45),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Isenção de responsabilidade: o aplicativo é fornecido sem '
+                'garantias. O autor não se responsabiliza por nada '
+                '(divergências em notas, médias, N4, simulações, faltas ou '
+                'decisões acadêmicas). Confira sempre no Portal do Aluno '
+                'oficial da Católica SC.',
+                style: legenda.copyWith(height: 1.45),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Licença: PolyForm Noncommercial 1.0.0 — uso pessoal e '
+                'educacional, sem fins comerciais.',
+                style: legenda.copyWith(height: 1.45),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 20),
         Text(
-          'Boletim Católica SC · feito por gaab0418\n'
-          'App não oficial, sem vínculo com a Católica SC ou a TOTVS.',
+          'Boletim Católica SC · feito por gaab0418 (de estudante para estudante)\n'
+          'App educacional, não oficial, sem vínculo com a Católica SC ou a TOTVS e sem garantias.',
           textAlign: TextAlign.center,
           style: legenda.copyWith(height: 1.5),
         ),

@@ -447,6 +447,12 @@ class _SegurancaEntrada extends StatelessWidget {
             texto:
                 'O aplicativo só lê seu boletim acadêmico e nunca envia alterações para a instituição.',
           ),
+          const SizedBox(height: 8),
+          const _PontoSeguranca(
+            titulo: 'De estudante para estudante (uso por sua conta)',
+            texto:
+                'Projeto para aprender em um caso real as tecnologias vistas em aula, sem vínculo com a Católica SC ou a TOTVS. O autor não se responsabiliza pelos dados exibidos.',
+          ),
         ],
       ),
     );
