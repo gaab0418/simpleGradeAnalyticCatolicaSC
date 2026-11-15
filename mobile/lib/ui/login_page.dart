@@ -433,7 +433,7 @@ class _SegurancaEntrada extends StatelessWidget {
           const _PontoSeguranca(
             titulo: 'Conexão direta com o portal',
             texto:
-                'O app fala direto com portal.catolicasc.org.br. Sua senha não passa por nenhum outro servidor.',
+                'O app fala direto com o portal acadêmico (TOTVS RM). Sua senha não passa por nenhum outro servidor.',
           ),
           const SizedBox(height: 8),
           const _PontoSeguranca(
@@ -446,6 +446,12 @@ class _SegurancaEntrada extends StatelessWidget {
             titulo: 'Consulta apenas de leitura',
             texto:
                 'O aplicativo só lê seu boletim acadêmico e nunca envia alterações para a instituição.',
+          ),
+          const SizedBox(height: 8),
+          const _PontoSeguranca(
+            titulo: 'De estudante para estudante (uso por sua conta)',
+            texto:
+                'Projeto para aprender em um caso real as tecnologias vistas em aula, sem vínculo com a instituição de ensino ou a TOTVS. O autor não se responsabiliza pelos dados exibidos.',
           ),
         ],
       ),

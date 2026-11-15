@@ -40,7 +40,7 @@ class _BoletimAppState extends State<BoletimApp> with WidgetsBindingObserver {
     return ListenableBuilder(
       listenable: app,
       builder: (context, _) => MaterialApp(
-        title: 'Boletim Católica SC',
+        title: 'Grade Analytic',
         debugShowCheckedModeBanner: false,
         theme: temaDoApp(Brightness.light),
         darkTheme: temaDoApp(Brightness.dark),

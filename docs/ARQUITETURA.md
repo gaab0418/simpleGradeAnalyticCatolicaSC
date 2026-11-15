@@ -121,6 +121,6 @@ Região da função: `gru1` (São Paulo), para ficar perto do portal.
 
 - Limite de tentativas compartilhado entre instâncias (Vercel KV/Upstash) se houver abuso.
 - CSP com nonce para tirar `'unsafe-inline'`.
-- Se a Católica bloquear os IPs da Vercel, o site para; o app continua funcionando.
+- Se o portal bloquear os IPs da Vercel, o site para; o app continua funcionando.
 - Outras instituições com TOTVS RM: hoje basta `PORTAL_URL` e `config.ts`, mas os nomes
   das colunas de nota ("1 - Nota 1"…) variam por instituição e precisariam virar configuração.

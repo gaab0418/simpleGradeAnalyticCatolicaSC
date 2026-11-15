@@ -1,3 +1,9 @@
+> **Required Notice:** Copyright (c) 2026 gaab0418 (<https://github.com/gaab0418>)
+>
+> **Termos de Uso e Isenção de Responsabilidade (PT-BR):** Projeto educacional feito de estudante para estudante, fornecido **sem garantias** e **sem responsabilidade do autor por quaisquer danos ou divergências**. Leia [TERMS.md](TERMS.md) antes de usar.
+
+---
+
 # PolyForm Noncommercial License 1.0.0
 
 <https://polyformproject.org/licenses/noncommercial/1.0.0>

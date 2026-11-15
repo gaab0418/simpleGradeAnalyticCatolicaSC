@@ -6,7 +6,6 @@ import { Card } from "@/componentes/ui/card";
 import { Skeleton } from "@/componentes/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/componentes/ui/tabs";
 import { acoes, useLoja } from "@/lib/cliente/loja";
-import { instituicao } from "@/lib/config";
 import { quando } from "@/lib/dominio/formato";
 import { Boletim } from "./Boletim";
 import { Desempenho } from "./Desempenho";
@@ -81,9 +80,9 @@ export function Aplicativo() {
           <span className="flex items-center gap-2.5 font-bold tracking-tight [&_svg]:size-[22px] [&_svg]:shrink-0 [&_svg]:text-primary">
             <Logo />
             <span>
-              Boletim{" "}
+              Grade Analytic{" "}
               <small className="hidden text-[13px] font-normal text-texto-3 sm:inline">
-                {instituicao.nome}
+                Boletim
               </small>
             </span>
           </span>
