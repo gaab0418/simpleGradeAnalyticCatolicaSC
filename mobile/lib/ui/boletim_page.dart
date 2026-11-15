@@ -76,29 +76,10 @@ class BoletimPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (h != null && h.semestres.isNotEmpty)
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: h.semestres.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, i) {
-                  final s = h.semestres[i];
-                  return ChoiceChip(
-                    label: Text(rotuloPeriodo(s.codigo)),
-                    selected: s.codigo == app.periodo,
-                    showCheckmark: false,
-                    selectedColor: c.texto,
-                    backgroundColor: c.superficie,
-                    side: BorderSide(color: c.borda),
-                    labelStyle: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: s.codigo == app.periodo ? c.fundo : c.texto2,
-                    ),
-                    onSelected: (_) => app.selecionarPeriodo(s.codigo),
-                  );
-                },
-              ),
+            _SeletorSemestres(
+              codigos: [for (final s in h.semestres) s.codigo],
+              ativo: app.periodo,
+              aoSelecionar: app.selecionarPeriodo,
             ),
           const SizedBox(height: 20),
           Text(
@@ -315,6 +296,131 @@ class _IndicadorCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SeletorSemestres extends StatelessWidget {
+  const _SeletorSemestres({
+    required this.codigos,
+    required this.ativo,
+    required this.aoSelecionar,
+  });
+
+  final List<String> codigos;
+  final String? ativo;
+  final ValueChanged<String> aoSelecionar;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    final grupos = agruparPorAno(codigos, (cod) => cod);
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: grupos.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final grupo = grupos[i];
+          final anoAtivo = grupo.semestres.contains(ativo);
+          return Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: anoAtivo
+                  ? c.acento.withValues(alpha: 0.10)
+                  : (i.isEven ? c.superficie : c.superficie2),
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(
+                color: anoAtivo
+                    ? c.acento.withValues(alpha: 0.45)
+                    : (i.isEven ? c.borda : c.bordaForte),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var j = 0; j < grupo.semestres.length; j++) ...[
+                  if (j > 0) const SizedBox(width: 2),
+                  _BotaoSemestre(
+                    codigo: grupo.semestres[j],
+                    selecionado: grupo.semestres[j] == ativo,
+                    anoAtivo: anoAtivo,
+                    aoTocar: () => aoSelecionar(grupo.semestres[j]),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _BotaoSemestre extends StatelessWidget {
+  const _BotaoSemestre({
+    required this.codigo,
+    required this.selecionado,
+    required this.anoAtivo,
+    required this.aoTocar,
+  });
+
+  final String codigo;
+  final bool selecionado;
+  final bool anoAtivo;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    final p = partesPeriodo(codigo);
+    return Semantics(
+      button: true,
+      selected: selecionado,
+      child: Material(
+        color: selecionado ? c.texto : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: aoTocar,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+            child: Center(
+              child: Text.rich(
+                TextSpan(
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                  children: [
+                    TextSpan(
+                      text: p.ano,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                        color: selecionado
+                            ? c.fundo
+                            : (anoAtivo ? c.texto : c.texto2),
+                      ),
+                    ),
+                    if (p.semestre != null)
+                      TextSpan(
+                        text: '/${p.semestre}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: selecionado
+                              ? c.fundo.withValues(alpha: 0.78)
+                              : c.texto3,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { historicoDemo } from "@/lib/demo";
 import { calcularDesempenho } from "@/lib/dominio/desempenho";
-import { dias, fmt, nomeMateria, rotuloPeriodo, titulo } from "@/lib/dominio/formato";
+import {
+  agruparSemestresPorAno,
+  dias,
+  fmt,
+  nomeMateria,
+  partesPeriodo,
+  rotuloPeriodo,
+  titulo,
+} from "@/lib/dominio/formato";
 import { notasNovas } from "@/lib/dominio/novidades";
 import {
   analisar,
@@ -126,9 +134,22 @@ it("formatação", () => {
   expect(fmt(7.25)).toBe("7,3");
   expect(titulo("CÁLCULO DIFERENCIAL E INTEGRAL II")).toBe("Cálculo Diferencial e Integral II");
   expect(nomeMateria("BANCO DE DADOS - BD1")).toEqual({ nome: "Banco de Dados", sigla: "BD1" });
+  expect(partesPeriodo("202623")).toEqual({ ano: "2026", semestre: "2" });
+  expect(partesPeriodo("2026")).toEqual({ ano: "2026", semestre: null });
   expect(rotuloPeriodo("202623")).toBe("2026/2");
+  expect(rotuloPeriodo("ATIP")).toBe("ATIP");
   expect(dias(4)).toBe("1 dia");
   expect(dias(6)).toBe("1,5 dias");
+});
+
+it("agruparSemestresPorAno agrupa por ano preservando a ordem", () => {
+  const h = historicoDemo(new Date(2026, 10, 12));
+  const grupos = agruparSemestresPorAno(h.semestres);
+  expect(grupos.map((g) => ({ ano: g.ano, codigos: g.semestres.map((s) => s.codigo) }))).toEqual([
+    { ano: "2026", codigos: ["202623", "202611"] },
+    { ano: "2025", codigos: ["202523", "202511"] },
+    { ano: "2024", codigos: ["202423", "202411"] },
+  ]);
 });
 
 describe("com o histórico de demonstração", () => {
