@@ -2,9 +2,17 @@ name: Site
 
 on:
   push:
+    branches: ["**"]
     paths: ["site/**", ".github/workflows/site.yml"]
+    tags: ["site-v*"]
   pull_request:
-    paths: ["site/**"]
+    paths: ["site/**", ".github/workflows/site.yml"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da release (opcional, ex: site-v1.0.0)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -15,6 +23,8 @@ jobs:
     defaults:
       run:
         working-directory: site
+    outputs:
+      versao: ${{ steps.versao.outputs.versao }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,3 +37,64 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Extrair versão do package.json
+        id: versao
+        run: echo "versao=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: verificar
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (
+        github.ref == 'refs/heads/main' ||
+        startsWith(github.ref, 'refs/tags/site-v')
+      ))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      deployments: write
+    environment:
+      name: Production
+      url: ${{ steps.publicar.outputs.url }}
+    steps:
+      - name: Publicar release Web e registrar deployment
+        id: publicar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_INPUT: ${{ inputs.tag }}
+          VERSAO_PKG: ${{ needs.verificar.outputs.versao }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          SITE_URL="https://simple-grade-analytic.vercel.app"
+
+          if [ -n "$TAG_INPUT" ]; then
+            TAG="$TAG_INPUT"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="site-v${VERSAO_PKG}"
+            if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+               git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}" >/dev/null 2>&1; then
+              MAJOR_MINOR="${VERSAO_PKG%.*}"
+              MAX_PATCH=$(
+                gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/site-v${MAJOR_MINOR}." --paginate -q '.[].ref' 2>/dev/null \
+                  | awk -F. '/^refs\/tags\/site-v[0-9]+\.[0-9]+\.[0-9]+$/ {print $NF}' \
+                  | sort -n \
+                  | tail -n1 || true
+              )
+              NEXT_PATCH=$(( ${MAX_PATCH:-0} + 1 ))
+              TAG="site-v${MAJOR_MINOR}.${NEXT_PATCH}"
+            fi
+          fi
+
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              -R "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Grade Analytic Web ${TAG}" \
+              --notes "Deploy de produção na Vercel: ${SITE_URL}" \
+              --generate-notes
+          fi
+
+          echo "url=${SITE_URL}" >> "$GITHUB_OUTPUT"
