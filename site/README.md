@@ -23,7 +23,7 @@ Na tela de entrada, "Ver uma demonstração sem conta" abre o site com dados fic
 | Variável | Obrigatória | Para quê |
 |---|---|---|
 | `SESSAO_SEGREDO` | para manter login | Chave que cifra o cookie de sessão (mínimo 32 caracteres) |
-| `PORTAL_URL` | não | Outro portal TOTVS RM (padrão: Católica SC) |
+| `PORTAL_URL` | não | Outro portal TOTVS RM (padrão: portal TOTVS RM configurado) |
 | `NEXT_PUBLIC_INSTITUICAO` | não | Nome exibido no site |
 
 Quem publica o site tem acesso técnico às senhas que passam por ele. Leia

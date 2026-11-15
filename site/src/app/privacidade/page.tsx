@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { instituicao } from "@/lib/config";
 import { Logo } from "@/componentes/icones";
 
 export const metadata: Metadata = { title: "Termos de uso, privacidade e funcionamento" };
@@ -18,9 +17,9 @@ export default function Privacidade() {
           >
             <Logo />
             <span>
-              Boletim{" "}
+              Grade Analytic{" "}
               <small className="hidden text-[13px] font-normal text-texto-3 sm:inline">
-                {instituicao.nome}
+                Boletim
               </small>
             </span>
           </Link>
@@ -32,11 +31,11 @@ export default function Privacidade() {
             Termos de uso, privacidade e funcionamento
           </h1>
           <p>
-            Este site mostra as suas notas e faltas do portal acadêmico da {instituicao.nome} de um
-            jeito mais fácil de ler. Ele é um projeto criado{" "}
+            O <strong>Grade Analytic</strong> mostra as suas notas e faltas do portal acadêmico de
+            um jeito mais fácil de ler. Ele é um projeto criado{" "}
             <strong>de estudante para estudante</strong>, com o intuito educacional de aprender a
             usar, em um caso real, as ferramentas e tecnologias disponíveis e vistas durante as
-            aulas — não é oficial e não tem vínculo com a {instituicao.nome} nem com a TOTVS.
+            aulas — não é oficial e não tem vínculo com a instituição de ensino nem com a TOTVS.
           </p>
 
           <h2 className="mt-4 text-[17px] font-semibold">
@@ -56,7 +55,7 @@ export default function Privacidade() {
             </li>
             <li>
               <strong>Fonte oficial:</strong> confira sempre as informações oficiais diretamente no
-              Portal do Aluno da {instituicao.nome}.
+              Portal do Aluno oficial da sua instituição.
             </li>
           </ul>
 

@@ -8,7 +8,6 @@ import { Checkbox } from "@/componentes/ui/checkbox";
 import { Input } from "@/componentes/ui/input";
 import { Label } from "@/componentes/ui/label";
 import { acoes, useLoja } from "@/lib/cliente/loja";
-import { instituicao } from "@/lib/config";
 import { Faltas } from "./Boletim";
 import { IconeEscudo } from "./icones";
 import { Selo } from "./Situacao";
@@ -35,7 +34,7 @@ export function Entrada() {
           Suas notas e faltas, com o que falta para passar.
         </h1>
         <p className="text-muted-foreground">
-          Entre com o mesmo usuário e senha do portal da {instituicao.nome}.
+          Entre com o mesmo usuário e senha do seu portal acadêmico.
         </p>
 
         <form onSubmit={enviar} className="mt-6 grid gap-3.5">
@@ -184,8 +183,8 @@ export function Entrada() {
               </dl>
               <p className="text-[13px] text-texto-3">
                 Projeto de estudante para estudante para aprender em um caso real tecnologias vistas
-                em aula, sem vínculo com a {instituicao.nome} ou a TOTVS e sem responsabilidade sobre
-                os dados exibidos.{" "}
+                em aula, sem vínculo com a instituição de ensino ou a TOTVS e sem responsabilidade
+                sobre os dados exibidos.{" "}
                 <Link href="/privacidade" className="underline hover:brightness-110">
                   Termos de uso e privacidade
                 </Link>

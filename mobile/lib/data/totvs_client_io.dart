@@ -88,7 +88,7 @@ class _Sessao implements PortalSessao {
       throw login.status >= 500
           ? const PortalException(
               FalhaPortal.portal,
-              'O portal da Católica está fora do ar. Tente de novo em instantes.',
+              'O portal acadêmico está fora do ar. Tente de novo em instantes.',
             )
           : const PortalException(
               FalhaPortal.credenciais,

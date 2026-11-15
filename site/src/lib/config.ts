@@ -3,7 +3,7 @@
  * outro portal TOTVS RM, troque estes valores (ou as variáveis de ambiente).
  */
 export const instituicao = {
-  nome: process.env.NEXT_PUBLIC_INSTITUICAO ?? "Católica SC",
+  nome: process.env.NEXT_PUBLIC_INSTITUICAO ?? "Grade Analytic",
   /** Só o servidor usa. Sem barra no fim. */
   portal: process.env.PORTAL_URL ?? "https://portal.catolicasc.org.br",
 } as const;

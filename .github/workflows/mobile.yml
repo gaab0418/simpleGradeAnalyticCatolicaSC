@@ -50,7 +50,7 @@ jobs:
           echo "semver=${raw%%+*}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
-          name: boletim-catolica-apk
+          name: grade-analytic-apk
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
@@ -73,7 +73,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: boletim-catolica-apk
+          name: grade-analytic-apk
           path: artifacts
       - name: Publicar release Mobile e registrar deployment
         id: publicar
@@ -99,7 +99,7 @@ jobs:
             exit 1
           fi
 
-          APK_VERSIONADO="artifacts/boletim-catolica-${TAG}.apk"
+          APK_VERSIONADO="artifacts/grade-analytic-${TAG}.apk"
           SHA_FILE="${APK_VERSIONADO}.sha256"
           cp "$APK_ORIGEM" "$APK_VERSIONADO"
           (cd artifacts && sha256sum "$(basename "$APK_VERSIONADO")" > "$(basename "$SHA_FILE")")
@@ -118,7 +118,7 @@ jobs:
               "$SHA_FILE" \
               -R "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "Boletim Mobile ${TAG} (${VERSAO_RAW})" \
+              --title "Grade Analytic Mobile ${TAG} (${VERSAO_RAW})" \
               --notes "Build de produção do aplicativo Android (${VERSAO_RAW}). Inclui APK e checksum SHA-256." \
               --generate-notes
           fi

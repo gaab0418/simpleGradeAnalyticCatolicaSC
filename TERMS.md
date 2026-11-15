@@ -1,6 +1,6 @@
-# Termos de Uso e Isenção de Responsabilidade — Boletim Católica SC
+# Termos de Uso e Isenção de Responsabilidade — Grade Analytic
 
-Estes Termos de Uso regulam a utilização do repositório, do site e do aplicativo **Boletim Católica SC** (em conjunto, o **"Sistema"**). Ao acessar, compilar, hospedar ou utilizar qualquer parte do Sistema, você concorda integralmente com os termos abaixo.
+Estes Termos de Uso regulam a utilização do repositório, do site e do aplicativo **Grade Analytic** (em conjunto, o **"Sistema"**). Ao acessar, compilar, hospedar ou utilizar qualquer parte do Sistema, você concorda integralmente com os termos abaixo.
 
 ## 1. Propósito Educacional — De Estudante para Estudante
 
@@ -10,7 +10,7 @@ O Sistema não possui fins lucrativos, não exibe anúncios, não comercializa d
 
 ## 2. Ausência de Vínculo Oficial
 
-O Sistema **não é oficial** e **não possui qualquer vínculo, patrocínio, aprovação, endosso ou afiliação** com o **Centro Universitário Católica de Santa Catarina (Católica SC)** nem com a **TOTVS S.A.** Todas as marcas eventualmente citadas pertencem aos seus respectivos titulares e são mencionadas apenas de forma descritiva.
+O Sistema **não é oficial** e **não possui qualquer vínculo, patrocínio, aprovação, endosso ou afiliação** com a **instituição de ensino** nem com a **TOTVS S.A.** Todas as marcas eventualmente citadas pertencem aos seus respectivos titulares e são mencionadas apenas de forma descritiva.
 
 ## 3. Isenção Total de Responsabilidade (*As-Is*)
 
@@ -23,7 +23,7 @@ O Sistema é disponibilizado **"no estado em que se encontra" (*as-is*)**, sem g
 - Falhas de comunicação, bloqueios, alterações de API ou indisponibilidade do portal acadêmico TOTVS RM;
 - Perda de prazos, reprovações, decisões acadêmicas, danos diretos ou indiretos decorrentes da confiança nas informações exibidas pelo Sistema.
 
-> **Atenção:** O **Portal do Aluno oficial da Católica SC** e os registros da secretaria acadêmica são as **únicas fontes oficiais e definitivas**. Confira sempre suas notas e faltas diretamente no portal oficial antes de tomar qualquer decisão acadêmica.
+> **Atenção:** O **Portal do Aluno oficial da sua instituição de ensino** e os registros da secretaria acadêmica são as **únicas fontes oficiais e definitivas**. Confira sempre suas notas e faltas diretamente no portal oficial antes de tomar qualquer decisão acadêmica.
 
 ## 4. Credenciais, Privacidade e Risco do Usuário
 

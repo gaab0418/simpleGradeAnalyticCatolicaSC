@@ -91,7 +91,7 @@ class AjustesPage extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Usuário e senha ficam no cofre do sistema (Android Keystore / '
-                'Keychain do iOS) e só são enviados para o portal da Católica. '
+                'Keychain do iOS) e só são enviados para o portal acadêmico. '
                 'As notas ficam na área privada do app, fora do backup.',
                 style: legenda.copyWith(height: 1.45),
               ),
@@ -156,7 +156,7 @@ class AjustesPage extends StatelessWidget {
                 'garantias. O autor não se responsabiliza por nada '
                 '(divergências em notas, médias, N4, simulações, faltas ou '
                 'decisões acadêmicas). Confira sempre no Portal do Aluno '
-                'oficial da Católica SC.',
+                'oficial da sua instituição.',
                 style: legenda.copyWith(height: 1.45),
               ),
               const SizedBox(height: 8),
@@ -170,8 +170,8 @@ class AjustesPage extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(
-          'Boletim Católica SC · feito por gaab0418 (de estudante para estudante)\n'
-          'App educacional, não oficial, sem vínculo com a Católica SC ou a TOTVS e sem garantias.',
+          'Grade Analytic · feito por gaab0418 (de estudante para estudante)\n'
+          'App educacional, não oficial, sem vínculo com a instituição de ensino ou a TOTVS e sem garantias.',
           textAlign: TextAlign.center,
           style: legenda.copyWith(height: 1.5),
         ),

@@ -1,6 +1,6 @@
-# Boletim Católica SC — app de celular
+# Grade Analytic — app de celular
 
-Versão mobile (Flutter, Android e iOS) do boletim do portal TOTVS RM da Católica SC.
+Versão mobile (Flutter, Android e iOS) do boletim para portal acadêmico TOTVS RM.
 Mesmas regras e o mesmo visual do [site](../site/README.md), mais três coisas que
 só fazem sentido no celular:
 
@@ -28,7 +28,7 @@ flutter test                # 27 testes
 Para abrir direto na demonstração (prints, apresentação):
 `flutter run --dart-define=DEMO=true`.
 
-> O app fala direto com `portal.catolicasc.org.br`, sem passar por servidor nenhum. O site
+> O app fala direto com o portal acadêmico (`PORTAL_URL`), sem passar por servidor nenhum. O site
 > precisa de um repasse no servidor porque navegadores não conseguem chamar o portal (CORS).
 
 ## Arquitetura
@@ -70,5 +70,5 @@ Limites conhecidos, para não vender o que não é:
 - Não há certificate pinning: a confiança é a da cadeia de CAs do sistema.
 - O APK de release usa a chave de debug do template. Para distribuir de verdade,
   crie um keystore próprio e configure `signingConfig` em `android/app/build.gradle.kts`.
-- App não oficial. Se a Católica/TOTVS mudar a API do portal, `totvs_client_io.dart`
+- App não oficial. Se a instituição ou a TOTVS mudar a API do portal, `totvs_client_io.dart`
   é o único arquivo a ajustar.
