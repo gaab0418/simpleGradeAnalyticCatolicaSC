@@ -206,14 +206,71 @@ export function analisar(d: Disciplina): Analise {
   };
 }
 
+export type ModoOrdem = "urgencia" | "nome" | "faltas" | "soma" | "personalizada";
+
+/** Ordena análises conforme o modo escolhido ou a lista personalizada de chaves. */
+export function ordenarAnalises(
+  analises: readonly Analise[],
+  modo: ModoOrdem,
+  ordemPersonalizada: readonly string[] = [],
+): Analise[] {
+  const copia = [...analises];
+  if (modo === "personalizada" && ordemPersonalizada.length > 0) {
+    const pos = new Map(ordemPersonalizada.map((c, i) => [c, i]));
+    return copia.sort((a, b) => {
+      const ia = pos.get(a.disciplina.chave) ?? Number.MAX_SAFE_INTEGER;
+      const ib = pos.get(b.disciplina.chave) ?? Number.MAX_SAFE_INTEGER;
+      return ia - ib || b.situacao.urgencia - a.situacao.urgencia;
+    });
+  }
+  if (modo === "nome") {
+    return copia.sort((a, b) =>
+      a.disciplina.nome.localeCompare(b.disciplina.nome, "pt-BR"),
+    );
+  }
+  if (modo === "faltas") {
+    return copia.sort(
+      (a, b) =>
+        b.disciplina.faltas / b.limiteFaltas - a.disciplina.faltas / a.limiteFaltas ||
+        b.disciplina.faltas - a.disciplina.faltas ||
+        b.situacao.urgencia - a.situacao.urgencia,
+    );
+  }
+  if (modo === "soma") {
+    return copia.sort(
+      (a, b) => b.soma - a.soma || b.situacao.urgencia - a.situacao.urgencia,
+    );
+  }
+  return copia.sort(
+    (a, b) =>
+      b.situacao.urgencia - a.situacao.urgencia || (b.precisa ?? 0) - (a.precisa ?? 0),
+  );
+}
+
+/** Move uma chave para cima, para baixo ou para a posição de outra chave. */
+export function moverChave(
+  chaves: readonly string[],
+  chave: string,
+  destino: "cima" | "baixo" | string,
+): string[] {
+  const lista = [...chaves];
+  const idx = lista.indexOf(chave);
+  if (idx === -1) return lista;
+  const novoIdx =
+    destino === "cima"
+      ? idx - 1
+      : destino === "baixo"
+        ? idx + 1
+        : lista.indexOf(destino);
+  if (novoIdx < 0 || novoIdx >= lista.length || novoIdx === idx) return lista;
+  const [item] = lista.splice(idx, 1);
+  lista.splice(novoIdx, 0, item);
+  return lista;
+}
+
 /** Analisa e ordena: o mais urgente primeiro. */
 export function analisarSemestre(s: Semestre): Analise[] {
-  return s.disciplinas
-    .map(analisar)
-    .sort(
-      (a, b) =>
-        b.situacao.urgencia - a.situacao.urgencia || (b.precisa ?? 0) - (a.precisa ?? 0),
-    );
+  return ordenarAnalises(s.disciplinas.map(analisar), "urgencia");
 }
 
 /** Semestre fechado: nada mais muda no portal, não precisa buscar de novo. */

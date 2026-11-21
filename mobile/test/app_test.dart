@@ -328,6 +328,8 @@ void main() {
       ),
       findsOneWidget,
     );
+    await t.ensureVisible(find.byType(BlocoN4));
+    await t.pumpAndSettle();
     await t.tap(find.byType(BlocoN4));
     await t.pump();
     expect(
@@ -398,4 +400,81 @@ void main() {
     expect(find.byType(BlocoN4), findsOneWidget);
     expect(t.takeException(), isNull);
   });
+
+  testWidgets(
+    'reordenar e ocultar matérias no boletim e restaurar em Matérias ocultas',
+    (t) async {
+      final app = novoApp();
+      await t.pumpWidget(BoletimApp(app));
+      await t.runAsync(app.iniciar);
+      await t.pumpAndSettle();
+
+      final demo = find.text('Ver uma demonstração sem conta');
+      await t.ensureVisible(demo);
+      await t.tap(demo);
+      await t.pumpAndSettle();
+
+      // Reordena e alterna modo de ordenacao.
+      expect(find.text('A–Z'), findsOneWidget);
+      await t.tap(find.text('A–Z'));
+      await t.pumpAndSettle();
+
+      final descer = find.byTooltip('Mover Arquitetura de Software para baixo');
+      await t.dragUntilVisible(
+        descer,
+        find.byType(BoletimPage),
+        const Offset(0, -150),
+      );
+      await Scrollable.ensureVisible(t.element(descer), alignment: 0.5);
+      await t.pumpAndSettle();
+      await t.tap(descer);
+      await t.pumpAndSettle();
+      expect(find.text('Restaurar ordem'), findsOneWidget);
+
+      // Oculta Compiladores e confere na secao recolhida no rodape.
+      final ocultarCmp = find.byTooltip('Ocultar Compiladores');
+      await t.dragUntilVisible(
+        ocultarCmp,
+        find.byType(BoletimPage),
+        const Offset(0, -120),
+      );
+      await Scrollable.ensureVisible(t.element(ocultarCmp), alignment: 0.5);
+      await t.pumpAndSettle();
+      await t.tap(ocultarCmp);
+      await t.pumpAndSettle();
+
+      expect(find.text('Compiladores'), findsNothing);
+
+      await t.dragUntilVisible(
+        find.text('Matérias ocultas'),
+        find.byType(BoletimPage),
+        const Offset(0, -200),
+      );
+      await Scrollable.ensureVisible(
+        t.element(find.text('Matérias ocultas')),
+        alignment: 0.5,
+      );
+      await t.pumpAndSettle();
+      expect(find.text('Matérias ocultas'), findsOneWidget);
+      await t.tap(find.text('Matérias ocultas'));
+      await t.pumpAndSettle();
+
+      await t.dragUntilVisible(
+        find.text('Compiladores'),
+        find.byType(BoletimPage),
+        const Offset(0, -150),
+      );
+      expect(find.text('Compiladores'), findsOneWidget);
+
+      // Restaura Compiladores de volta para o boletim.
+      final mostrarCmp = find.byTooltip('Mostrar Compiladores');
+      await Scrollable.ensureVisible(t.element(mostrarCmp), alignment: 0.5);
+      await t.pumpAndSettle();
+      await t.tap(mostrarCmp);
+      await t.pumpAndSettle();
+
+      expect(find.text('Matérias ocultas'), findsNothing);
+      expect(t.takeException(), isNull);
+    },
+  );
 }
