@@ -29,6 +29,7 @@ export interface Estado {
 
 const CHAVE = "boletim.v1";
 const CHAVE_PASSADO = "boletim.passado.v1";
+export const CHAVE_LAYOUT = "boletim.layout.v1";
 const VALIDADE_MS = 15 * 60_000;
 const TTL_SALVO_MS = 7 * 86_400_000;
 
@@ -109,6 +110,7 @@ function apagar() {
   for (const area of [localStorage, sessionStorage]) {
     try {
       area.removeItem(CHAVE);
+      area.removeItem(CHAVE_LAYOUT);
     } catch {
       // nada a fazer
     }

@@ -9,19 +9,50 @@ import '../state/app_controller.dart';
 import 'widgets/componentes.dart';
 import 'widgets/materia_card.dart';
 
-class BoletimPage extends StatelessWidget {
+class BoletimPage extends StatefulWidget {
   const BoletimPage(this.app, {super.key});
   final AppController app;
 
   @override
+  State<BoletimPage> createState() => _BoletimPageState();
+}
+
+class _BoletimPageState extends State<BoletimPage> {
+  bool _mostrarOcultas = false;
+  String? _ultimoPeriodo;
+
+  @override
   Widget build(BuildContext context) {
+    final app = widget.app;
+    if (_ultimoPeriodo != app.periodo) {
+      _ultimoPeriodo = app.periodo;
+      _mostrarOcultas = false;
+    }
+
     final c = Paleta.of(context);
     final h = app.historico;
     final semestre = app.semestreAtual;
-    final materias = semestre == null
+    final materiasBase = semestre == null
         ? const <Analise>[]
-        : analisarSemestre(semestre);
-    final resumo = resumir(materias);
+        : [for (final d in semestre.disciplinas) analisar(d)];
+    final layout = app.layoutDoSemestre(semestre?.codigo);
+    final materiasOrdenadas = ordenarAnalises(
+      materiasBase,
+      layout.modo,
+      layout.ordem,
+    );
+    final ocultasSet = layout.ocultas.toSet();
+    final visiveis = [
+      for (final m in materiasOrdenadas)
+        if (!ocultasSet.contains(m.disciplina.chave)) m,
+    ];
+    final ocultas = [
+      for (final m in materiasOrdenadas)
+        if (ocultasSet.contains(m.disciplina.chave)) m,
+    ];
+    final resumo = resumir(materiasOrdenadas);
+    final recado = (visiveis.isNotEmpty ? resumir(visiveis) : resumo).recado;
+    final temGarantidasVisiveis = visiveis.any((m) => m.situacao.passou);
     final atualizado = semestre?.atualizadoEm;
 
     return RefreshIndicator(
@@ -128,19 +159,29 @@ class BoletimPage extends StatelessWidget {
               acao: 'Ok',
               aoAgir: app.dispensarNovidades,
             ),
-          if (resumo.recado.isNotEmpty)
-            Aviso(resumo.recado, cor: c.acento, etiqueta: 'Foco'),
+          if (recado.isNotEmpty)
+            Aviso(recado, cor: c.acento, etiqueta: 'Foco'),
           _IndicadoresBoletim(
             garantidas: resumo.garantidas,
             materias: resumo.materias,
-            emAberto: materias
+            emAberto: materiasOrdenadas
                 .where((m) => !m.situacao.passou && !m.situacao.encerrada)
                 .length,
             semNota: resumo.semNota,
             faltas: resumo.faltas,
           ),
-          const SizedBox(height: 16),
-          if (materias.isEmpty)
+          const SizedBox(height: 12),
+          if (materiasOrdenadas.isNotEmpty) ...[
+            _BarraOrdenacao(
+              modoAtivo: layout.modo,
+              temGarantidasVisiveis: temGarantidasVisiveis,
+              aoSelecionarModo: app.definirModoOrdem,
+              aoOcultarGarantidas: app.ocultarGarantidas,
+            ),
+            const SizedBox(height: 12),
+          ] else
+            const SizedBox(height: 4),
+          if (materiasOrdenadas.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),
               child: Text(
@@ -148,21 +189,152 @@ class BoletimPage extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: c.texto2),
               ),
+            )
+          else if (visiveis.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+              decoration: BoxDecoration(
+                color: c.superficie,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.borda),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Todas as matérias deste semestre estão ocultas lá embaixo.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: c.texto2),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() => _mostrarOcultas = false);
+                      app.mostrarTodasMaterias();
+                    },
+                    child: Text('Mostrar todas (${ocultas.length})'),
+                  ),
+                ],
+              ),
             ),
-          for (final m in materias)
+          for (var i = 0; i < visiveis.length; i++)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: MateriaCard(
-                m,
-                key: ValueKey('${semestre!.codigo}/${m.disciplina.chave}'),
+                visiveis[i],
+                key: ValueKey(
+                  '${semestre!.codigo}/${visiveis[i].disciplina.chave}',
+                ),
+                aoAlternarOculta: () =>
+                    app.alternarOcultaMateria(visiveis[i].disciplina.chave),
+                aoSubir: i > 0
+                    ? () => app.moverMateria(visiveis[i].disciplina.chave, -1)
+                    : null,
+                aoDescer: i < visiveis.length - 1
+                    ? () => app.moverMateria(visiveis[i].disciplina.chave, 1)
+                    : null,
               ),
             ),
           const SizedBox(height: 8),
           Text(
-            'Notas precedidas por ≥ mostram o mínimo necessário em cada prova para fechar média ${fmt(notaMinimaAprovacao)}. Toque na matéria para simular.',
+            'Notas precedidas por ≥ mostram o mínimo necessário em cada prova para fechar média ${fmt(notaMinimaAprovacao)}. Toque na matéria para simular ou use as setas para reordenar.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: c.texto2),
           ),
+          if (ocultas.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Divider(height: 1, color: c.borda),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () =>
+                        setState(() => _mostrarOcultas = !_mostrarOcultas),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 6,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _mostrarOcultas
+                                ? Icons.expand_more
+                                : Icons.chevron_right,
+                            size: 18,
+                            color: c.texto2,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Matérias ocultas',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: c.texto2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: c.superficie2,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: c.borda),
+                            ),
+                            child: Text(
+                              '${ocultas.length}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: c.texto2,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() => _mostrarOcultas = false);
+                    app.mostrarTodasMaterias();
+                  },
+                  child: const Text('Mostrar todas'),
+                ),
+              ],
+            ),
+            if (_mostrarOcultas) ...[
+              const SizedBox(height: 8),
+              for (final m in ocultas)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Opacity(
+                    opacity: 0.92,
+                    child: MateriaCard(
+                      m,
+                      key: ValueKey(
+                        '${semestre!.codigo}/oculta/${m.disciplina.chave}',
+                      ),
+                      oculta: true,
+                      aoAlternarOculta: () {
+                        if (ocultas.length <= 1) {
+                          setState(() => _mostrarOcultas = false);
+                        }
+                        app.alternarOcultaMateria(m.disciplina.chave);
+                      },
+                    ),
+                  ),
+                ),
+            ],
+          ],
         ],
       ),
     );
@@ -419,6 +591,122 @@ class _BotaoSemestre extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BarraOrdenacao extends StatelessWidget {
+  const _BarraOrdenacao({
+    required this.modoAtivo,
+    required this.temGarantidasVisiveis,
+    required this.aoSelecionarModo,
+    required this.aoOcultarGarantidas,
+  });
+
+  final ModoOrdem modoAtivo;
+  final bool temGarantidasVisiveis;
+  final ValueChanged<ModoOrdem> aoSelecionarModo;
+  final VoidCallback aoOcultarGarantidas;
+
+  static const _opcoes = [
+    (ModoOrdem.urgencia, 'Urgência'),
+    (ModoOrdem.nome, 'A–Z'),
+    (ModoOrdem.faltas, 'Mais faltas'),
+    (ModoOrdem.soma, 'Maior soma'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    return SizedBox(
+      height: 34,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final (modo, rotulo) in _opcoes) ...[
+            _ChipAcao(
+              rotulo: rotulo,
+              ativo: modoAtivo == modo,
+              aoTocar: () => aoSelecionarModo(modo),
+            ),
+            const SizedBox(width: 6),
+          ],
+          if (modoAtivo == ModoOrdem.personalizada) ...[
+            _ChipAcao(
+              rotulo: 'Restaurar ordem',
+              ativo: false,
+              destaque: c.acento,
+              aoTocar: () => aoSelecionarModo(ModoOrdem.urgencia),
+            ),
+            const SizedBox(width: 6),
+          ],
+          if (temGarantidasVisiveis)
+            _ChipAcao(
+              rotulo: 'Ocultar garantidas',
+              icone: Icons.visibility_off_outlined,
+              ativo: false,
+              aoTocar: aoOcultarGarantidas,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChipAcao extends StatelessWidget {
+  const _ChipAcao({
+    required this.rotulo,
+    required this.ativo,
+    required this.aoTocar,
+    this.icone,
+    this.destaque,
+  });
+
+  final String rotulo;
+  final bool ativo;
+  final VoidCallback aoTocar;
+  final IconData? icone;
+  final Color? destaque;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Paleta.of(context);
+    final corTexto = ativo
+        ? c.fundo
+        : (destaque ?? c.texto2);
+    return Material(
+      color: ativo ? c.texto : c.superficie,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: aoTocar,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: ativo ? c.texto : c.borda,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icone != null) ...[
+                Icon(icone, size: 14, color: corTexto),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                rotulo,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: ativo ? FontWeight.w600 : FontWeight.w500,
+                  color: corTexto,
+                ),
+              ),
+            ],
           ),
         ),
       ),
