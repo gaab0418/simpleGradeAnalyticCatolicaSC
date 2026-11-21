@@ -9,8 +9,19 @@ import 'componentes.dart';
 
 /// Uma materia no boletim. Tocar abre o simulador "E se eu tirar...".
 class MateriaCard extends StatefulWidget {
-  const MateriaCard(this.analise, {super.key});
+  const MateriaCard(
+    this.analise, {
+    super.key,
+    this.oculta = false,
+    this.aoAlternarOculta,
+    this.aoSubir,
+    this.aoDescer,
+  });
   final Analise analise;
+  final bool oculta;
+  final VoidCallback? aoAlternarOculta;
+  final VoidCallback? aoSubir;
+  final VoidCallback? aoDescer;
 
   @override
   State<MateriaCard> createState() => _MateriaCardState();
@@ -59,7 +70,7 @@ class _MateriaCardState extends State<MateriaCard> {
   bool _podeSimular(Analise a) {
     final d = a.disciplina;
     final oficial = d.situacao.toLowerCase();
-    if (d.faltas > limiteFaltas ||
+    if (d.faltas > a.limiteFaltas ||
         oficial.startsWith('aprov') ||
         oficial.startsWith('reprov')) {
       return false;
@@ -105,12 +116,51 @@ class _MateriaCardState extends State<MateriaCard> {
           InkWell(
             onTap: () => setState(() => _aberta = !_aberta),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              padding: EdgeInsets.fromLTRB(
+                widget.aoAlternarOculta != null ? 10 : 16,
+                14,
+                widget.aoSubir != null || widget.aoDescer != null ? 8 : 12,
+                14,
+              ),
               child: Column(
                 children: [
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      if (widget.aoAlternarOculta != null) ...[
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 30,
+                            minHeight: 30,
+                          ),
+                          iconSize: 18,
+                          color: c.texto3,
+                          tooltip: widget.oculta
+                              ? 'Mostrar $nome'
+                              : 'Ocultar $nome',
+                          onPressed: widget.aoAlternarOculta,
+                          icon: Icon(
+                            widget.oculta
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                      ],
+                      Semantics(
+                        label: _aberta ? 'Fechar simulador' : 'Abrir simulador',
+                        child: AnimatedRotation(
+                          turns: _aberta ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            Icons.expand_more,
+                            color: _aberta ? c.acento : c.texto2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,14 +180,35 @@ class _MateriaCardState extends State<MateriaCard> {
                           ],
                         ),
                       ),
-                      Semantics(
-                        label: _aberta ? 'Fechar simulador' : 'Abrir simulador',
-                        child: AnimatedRotation(
-                          turns: _aberta ? 0.5 : 0,
-                          duration: const Duration(milliseconds: 200),
-                          child: Icon(Icons.expand_more, color: c.texto2),
+                      if (widget.aoSubir != null ||
+                          widget.aoDescer != null) ...[
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          iconSize: 17,
+                          color: c.texto2,
+                          tooltip: 'Mover $nome para cima',
+                          onPressed: widget.aoSubir,
+                          icon: const Icon(Icons.arrow_upward_rounded),
                         ),
-                      ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          iconSize: 17,
+                          color: c.texto2,
+                          tooltip: 'Mover $nome para baixo',
+                          onPressed: widget.aoDescer,
+                          icon: const Icon(Icons.arrow_downward_rounded),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -195,7 +266,11 @@ class _MateriaCardState extends State<MateriaCard> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      BarraDeFaltas(a.faltas),
+                      BarraDeFaltas(
+                        a.faltas,
+                        limite: a.limiteFaltas,
+                        alerta: a.alertaFaltas,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Align(
@@ -413,8 +488,8 @@ class _Detalhes extends StatelessWidget {
     const h = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
     const p = TextStyle(fontSize: 15, height: 1.45);
 
-    final faltasTxt = a.faltas > limiteFaltas
-        ? 'Você passou do limite: ${a.faltas} faltas de $limiteFaltas permitidas.'
+    final faltasTxt = a.faltas > a.limiteFaltas
+        ? 'Você passou do limite: ${a.faltas} faltas de ${a.limiteFaltas} permitidas.'
         : a.faltas == 0
         ? 'Nenhuma falta até agora. Dá para faltar até ${dias(a.faltasRestantes)} antes de reprovar.'
         : 'Você faltou ${dias(a.faltas)} (${a.faltas} aulas). Ainda pode faltar ${dias(a.faltasRestantes)} antes de reprovar.';

@@ -22,7 +22,7 @@ dos dois lados cobrem os mesmos casos.
 - **Situação de cada matéria** pela média que você ainda precisa nas provas que faltam
   (9,8 na N1 com duas provas pela frente é "Tranquila", não "Crítica").
 - **Simulador**: arraste as notas que faltam e veja se a soma fecha 18.
-- **Faltas** contra o limite de 20 aulas, com alerta a partir de 16.
+- **Faltas** contra o limite de 20 aulas, com alerta a partir de 16 (no PAC: limite de 8 aulas, com alerta a partir de 4).
 - **Desempenho**: média geral, evolução por semestre, nota média em cada prova,
   distribuição das médias, faltas por semestre, maiores e menores médias.
 - **Nota nova**: avisa quando uma nota aparece no portal desde a última consulta.
@@ -35,8 +35,8 @@ dos dois lados cobrem os mesmos casos.
 | Em Risco | Precisa de 7,1 a 8,5 |
 | Crítica | Precisa de 8,6 a 10,0 |
 | Fora de alcance | Nem com 10 fecha média 6 |
-| Limite de faltas | 16 a 20 faltas |
-| Reprovada por falta | Mais de 20 faltas |
+| Limite de faltas | 16 a 20 faltas (4 a 8 no PAC) |
+| Reprovada por falta | Mais de 20 faltas (mais de 8 no PAC) |
 
 ## Privacidade, em uma frase
 

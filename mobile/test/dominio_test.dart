@@ -69,6 +69,49 @@ void main() {
       );
     });
 
+    test('PAC: limite de 8 faltas (2 dias) e alerta a partir de 4', () {
+      Disciplina pac(
+        List<double?> notas, {
+        int faltas = 0,
+        String nome =
+            'PROJETO DE APRENDIZAGEM COLABORATIVA EXTENSIONISTA IV - PAC ESOFT',
+        String codDisc = 'G1660',
+      }) => Disciplina(
+        chave: codDisc,
+        codTurma: 'T1',
+        codDisc: codDisc,
+        nomeBruto: nome,
+        situacao: 'Matriculado',
+        notas: notas,
+        faltas: faltas,
+      );
+
+      final normal = analisar(pac([9.8, null, null], faltas: 0));
+      expect(normal.limiteFaltas, 8);
+      expect(normal.alertaFaltas, 4);
+      expect(normal.situacao, Situacao.tranquila);
+
+      final alerta = analisar(pac([9.8, null, null], faltas: 4));
+      expect(alerta.situacao, Situacao.limiteDeFaltas);
+
+      final dentroSemAlerta = analisar(pac([10, 10, 10], faltas: 3));
+      expect(dentroSemAlerta.situacao, Situacao.garantida);
+
+      final noLimite = analisar(pac([10, 10, 10], faltas: 8));
+      expect(noLimite.situacao, Situacao.limiteDeFaltas);
+      expect(analisar(pac([3.0, 6.0, 6.0], faltas: 8)).precisaN4, 6);
+
+      final reprovada = analisar(pac([10, 10, 10], faltas: 9));
+      expect(reprovada.situacao, Situacao.reprovadaPorFalta);
+      expect(analisar(pac([3.0, 6.0, 6.0], faltas: 9)).precisaN4, isNull);
+
+      final porSigla = analisar(
+        pac([9.8, null, null], faltas: 12, nome: 'EXTENSAO - PAC', codDisc: 'PAC'),
+      );
+      expect(porSigla.limiteFaltas, 8);
+      expect(porSigla.situacao, Situacao.reprovadaPorFalta);
+    });
+
     test('ordena do mais urgente para o mais tranquilo', () {
       final s = Semestre(
         codigo: '202623',
@@ -334,5 +377,75 @@ void main() {
       expect(d.piores().first.nome, 'Cálculo I');
       expect(d.anotacoes, isNotEmpty);
     });
+  });
+
+  test('ordenarAnalises e moverChave suportam modos e ordem personalizada', () {
+    final lista = [
+      analisar(
+        Disciplina(
+          chave: 'a',
+          codTurma: 'T1',
+          codDisc: 'ZOO',
+          nomeBruto: 'ZOO - ZOO',
+          situacao: 'Matriculado',
+          notas: const [9, 9, null],
+          faltas: 4,
+        ),
+      ),
+      analisar(
+        Disciplina(
+          chave: 'b',
+          codTurma: 'T1',
+          codDisc: 'ALF',
+          nomeBruto: 'ALFA - ALF',
+          situacao: 'Matriculado',
+          notas: const [5, 5, null],
+          faltas: 2,
+        ),
+      ),
+      analisar(
+        Disciplina(
+          chave: 'c',
+          codTurma: 'T1',
+          codDisc: 'PAC',
+          nomeBruto: 'PROJETO DE APRENDIZAGEM COLABORATIVA - PAC',
+          situacao: 'Matriculado',
+          notas: const [8, 8, null],
+          faltas: 4,
+        ),
+      ),
+    ];
+
+    expect(
+      ordenarAnalises(
+        lista,
+        ModoOrdem.urgencia,
+      ).map((a) => a.disciplina.chave),
+      ['c', 'b', 'a'],
+    );
+    expect(
+      ordenarAnalises(lista, ModoOrdem.nome).map((a) => a.disciplina.chave),
+      ['b', 'c', 'a'],
+    );
+    expect(
+      ordenarAnalises(lista, ModoOrdem.faltas).map((a) => a.disciplina.chave),
+      ['c', 'a', 'b'],
+    );
+    expect(
+      ordenarAnalises(lista, ModoOrdem.soma).map((a) => a.disciplina.chave),
+      ['a', 'c', 'b'],
+    );
+
+    final movida = moverChave(['c', 'b', 'a'], 'a', deslocamento: -1);
+    expect(movida, ['c', 'a', 'b']);
+    expect(
+      ordenarAnalises(
+        lista,
+        ModoOrdem.personalizada,
+        movida,
+      ).map((a) => a.disciplina.chave),
+      ['c', 'a', 'b'],
+    );
+    expect(moverChave(['c', 'b', 'a'], 'c', alvo: 'a'), ['b', 'a', 'c']);
   });
 }

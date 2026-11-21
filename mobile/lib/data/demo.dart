@@ -100,7 +100,7 @@ Historico historicoDemo(DateTime agora) {
         d('Computação em Nuvem', 'NUV', [6.0, 5.5, null], faltas: 8),
         d('Compiladores', 'CMP', [3.5, null, null], faltas: 17),
         d('Empreendedorismo', 'EMP', [2.0, 4.5, null], faltas: 4),
-        d('Trabalho de Conclusão I', 'TCC1', [null, null, null]),
+        d('Projeto de Aprendizagem Colaborativa Extensionista', 'PAC', [null, null, null]),
       ]),
     ],
   );

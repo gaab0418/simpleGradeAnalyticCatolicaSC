@@ -56,6 +56,24 @@ export const passou = (s: Situacao) => s.id === "garantida" || s.id === "aprovad
 export const encerrada = (s: Situacao) =>
   s.id === "aprovada" || s.id === "reprovada" || s.id === "reprovadaPorFalta";
 
+const REGEX_PAC = /\bPAC\b|PROJETO DE APRENDIZAGEM COLABORATIVA/i;
+const REGEX_COD_PAC = /^PAC\b/i;
+
+/** Identifica disciplinas de PAC, que possuem metade da carga horária e limite de 2 dias de falta. */
+export function ehPac(d: Pick<Disciplina, "nome" | "codDisc">): boolean {
+  return REGEX_PAC.test(d.nome) || REGEX_COD_PAC.test(d.codDisc);
+}
+
+/** Limites de falta aplicáveis à disciplina (2 dias no PAC; 5 dias nas demais). */
+export function limitesFaltas(d: Pick<Disciplina, "nome" | "codDisc">): {
+  limite: number;
+  alerta: number;
+} {
+  return ehPac(d)
+    ? { limite: regras.limiteFaltasPac, alerta: regras.alertaFaltasPac }
+    : { limite: regras.limiteFaltas, alerta: regras.alertaFaltas };
+}
+
 function porNecessidade(media: number): SituacaoId {
   if (media > regras.notaMaxima) return "foraDeAlcance";
   if (media > 8.5) return "critica";
@@ -117,9 +135,14 @@ export interface Analise {
   media: number | null;
   /** A média acima já é definitiva. */
   mediaDefinitiva: boolean;
+  /** Limite máximo de faltas (em aulas) para esta disciplina. */
+  limiteFaltas: number;
+  /** Quantidade de faltas (em aulas) a partir da qual dispara alerta. */
+  alertaFaltas: number;
 }
 
 export function analisar(d: Disciplina): Analise {
+  const { limite: limiteFaltas, alerta: alertaFaltas } = limitesFaltas(d);
   const nota4 = d.nota4 ?? null;
   const { efetivas, indiceSubstituido, notaSubstituida } = aplicarNota4(d.notas, nota4);
   const lancadas = efetivas.filter((n): n is number => n !== null);
@@ -132,7 +155,7 @@ export function analisar(d: Disciplina): Analise {
   const oficial = d.situacao.toLowerCase();
 
   let id: SituacaoId;
-  if (d.faltas > regras.limiteFaltas) id = "reprovadaPorFalta";
+  if (d.faltas > limiteFaltas) id = "reprovadaPorFalta";
   else if (oficial.startsWith("aprov")) id = "aprovada";
   else if (oficial.startsWith("reprov")) id = "reprovada";
   else if (lancadas.length === 0) id = "semNotas";
@@ -142,7 +165,7 @@ export function analisar(d: Disciplina): Analise {
 
   // Faltas perto do limite pesam mais que nota tranquila.
   if (
-    d.faltas >= regras.alertaFaltas &&
+    d.faltas >= alertaFaltas &&
     SITUACOES[id].urgencia < SITUACOES.limiteDeFaltas.urgencia
   ) {
     id = "limiteDeFaltas";
@@ -153,7 +176,7 @@ export function analisar(d: Disciplina): Analise {
     nota4 === null &&
     lancadas.length > 0 &&
     soma < regras.somaAprovacao &&
-    d.faltas <= regras.limiteFaltas &&
+    d.faltas <= limiteFaltas &&
     !passou(SITUACOES[id])
   ) {
     const menorNota = Math.min(...efetivas.map((n) => n ?? 0));
@@ -178,17 +201,76 @@ export function analisar(d: Disciplina): Analise {
     situacao: SITUACOES[id],
     media: d.mediaFinal ?? (lancadas.length ? soma / lancadas.length : null),
     mediaDefinitiva: d.mediaFinal !== null || restantes === 0,
+    limiteFaltas,
+    alertaFaltas,
   };
+}
+
+export type ModoOrdem = "urgencia" | "nome" | "faltas" | "soma" | "personalizada";
+
+/** Ordena análises conforme o modo escolhido ou a lista personalizada de chaves. */
+export function ordenarAnalises(
+  analises: readonly Analise[],
+  modo: ModoOrdem,
+  ordemPersonalizada: readonly string[] = [],
+): Analise[] {
+  const copia = [...analises];
+  if (modo === "personalizada" && ordemPersonalizada.length > 0) {
+    const pos = new Map(ordemPersonalizada.map((c, i) => [c, i]));
+    return copia.sort((a, b) => {
+      const ia = pos.get(a.disciplina.chave) ?? Number.MAX_SAFE_INTEGER;
+      const ib = pos.get(b.disciplina.chave) ?? Number.MAX_SAFE_INTEGER;
+      return ia - ib || b.situacao.urgencia - a.situacao.urgencia;
+    });
+  }
+  if (modo === "nome") {
+    return copia.sort((a, b) =>
+      a.disciplina.nome.localeCompare(b.disciplina.nome, "pt-BR"),
+    );
+  }
+  if (modo === "faltas") {
+    return copia.sort(
+      (a, b) =>
+        b.disciplina.faltas / b.limiteFaltas - a.disciplina.faltas / a.limiteFaltas ||
+        b.disciplina.faltas - a.disciplina.faltas ||
+        b.situacao.urgencia - a.situacao.urgencia,
+    );
+  }
+  if (modo === "soma") {
+    return copia.sort(
+      (a, b) => b.soma - a.soma || b.situacao.urgencia - a.situacao.urgencia,
+    );
+  }
+  return copia.sort(
+    (a, b) =>
+      b.situacao.urgencia - a.situacao.urgencia || (b.precisa ?? 0) - (a.precisa ?? 0),
+  );
+}
+
+/** Move uma chave para cima, para baixo ou para a posição de outra chave. */
+export function moverChave(
+  chaves: readonly string[],
+  chave: string,
+  destino: "cima" | "baixo" | string,
+): string[] {
+  const lista = [...chaves];
+  const idx = lista.indexOf(chave);
+  if (idx === -1) return lista;
+  const novoIdx =
+    destino === "cima"
+      ? idx - 1
+      : destino === "baixo"
+        ? idx + 1
+        : lista.indexOf(destino);
+  if (novoIdx < 0 || novoIdx >= lista.length || novoIdx === idx) return lista;
+  const [item] = lista.splice(idx, 1);
+  lista.splice(novoIdx, 0, item);
+  return lista;
 }
 
 /** Analisa e ordena: o mais urgente primeiro. */
 export function analisarSemestre(s: Semestre): Analise[] {
-  return s.disciplinas
-    .map(analisar)
-    .sort(
-      (a, b) =>
-        b.situacao.urgencia - a.situacao.urgencia || (b.precisa ?? 0) - (a.precisa ?? 0),
-    );
+  return ordenarAnalises(s.disciplinas.map(analisar), "urgencia");
 }
 
 /** Semestre fechado: nada mais muda no portal, não precisa buscar de novo. */
