@@ -98,3 +98,37 @@ jobs:
           fi
 
           echo "url=${SITE_URL}" >> "$GITHUB_OUTPUT"
+
+  staging:
+    needs: verificar
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      deployments: write
+    environment:
+      name: Staging
+      url: ${{ steps.publicar.outputs.url }}
+    steps:
+      - name: Publicar pre-release Web e registrar deployment de Staging
+        id: publicar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSAO_PKG: ${{ needs.verificar.outputs.versao }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGING_URL="https://simple-grade-analytic-git-staging-gab-s3.vercel.app"
+          TAG="site-v${VERSAO_PKG}-rc.${GITHUB_RUN_NUMBER}"
+
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              -R "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --title "Grade Analytic Web ${TAG} (Staging)" \
+              --notes "Preview de staging na Vercel: ${STAGING_URL}" \
+              --generate-notes
+          fi
+
+          echo "url=${STAGING_URL}" >> "$GITHUB_OUTPUT"

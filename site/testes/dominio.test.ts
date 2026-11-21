@@ -69,6 +69,41 @@ describe("situação da matéria", () => {
     expect(analisar(disc([4.5, 4.5, null], { faltas: 16 })).situacao.id).toBe("critica");
   });
 
+  it("PAC: limite de 8 faltas (2 dias) e alerta a partir de 4", () => {
+    const pac = (
+      notas: Disciplina["notas"],
+      extra: Partial<Disciplina> = {},
+    ) =>
+      disc(notas, {
+        codDisc: "G1660",
+        nome: "PROJETO DE APRENDIZAGEM COLABORATIVA EXTENSIONISTA IV - PAC ESOFT",
+        ...extra,
+      });
+
+    const normal = analisar(pac([9.8, null, null], { faltas: 0 }));
+    expect(normal.limiteFaltas).toBe(8);
+    expect(normal.alertaFaltas).toBe(4);
+    expect(normal.situacao.id).toBe("tranquila");
+
+    const alerta = analisar(pac([9.8, null, null], { faltas: 4 }));
+    expect(alerta.situacao.id).toBe("limiteDeFaltas");
+
+    const dentroSemAlerta = analisar(pac([10, 10, 10], { faltas: 3 }));
+    expect(dentroSemAlerta.situacao.id).toBe("garantida");
+
+    const noLimite = analisar(pac([10, 10, 10], { faltas: 8 }));
+    expect(noLimite.situacao.id).toBe("limiteDeFaltas");
+    expect(analisar(pac([3.0, 6.0, 6.0], { faltas: 8 })).precisaN4).toBe(6);
+
+    const reprovada = analisar(pac([10, 10, 10], { faltas: 9 }));
+    expect(reprovada.situacao.id).toBe("reprovadaPorFalta");
+    expect(analisar(pac([3.0, 6.0, 6.0], { faltas: 9 })).precisaN4).toBeNull();
+
+    const porSigla = analisar(disc([9.8, null, null], { codDisc: "PAC", nome: "EXTENSAO - PAC", faltas: 12 }));
+    expect(porSigla.limiteFaltas).toBe(8);
+    expect(porSigla.situacao.id).toBe("reprovadaPorFalta");
+  });
+
   it("simulador", () => {
     const a = analisar(disc([6, null, null]));
     expect(simular(a, [6, 6]).passa).toBe(true);

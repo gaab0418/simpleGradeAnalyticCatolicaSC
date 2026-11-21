@@ -59,7 +59,7 @@ class _MateriaCardState extends State<MateriaCard> {
   bool _podeSimular(Analise a) {
     final d = a.disciplina;
     final oficial = d.situacao.toLowerCase();
-    if (d.faltas > limiteFaltas ||
+    if (d.faltas > a.limiteFaltas ||
         oficial.startsWith('aprov') ||
         oficial.startsWith('reprov')) {
       return false;
@@ -195,7 +195,11 @@ class _MateriaCardState extends State<MateriaCard> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      BarraDeFaltas(a.faltas),
+                      BarraDeFaltas(
+                        a.faltas,
+                        limite: a.limiteFaltas,
+                        alerta: a.alertaFaltas,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Align(
@@ -413,8 +417,8 @@ class _Detalhes extends StatelessWidget {
     const h = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
     const p = TextStyle(fontSize: 15, height: 1.45);
 
-    final faltasTxt = a.faltas > limiteFaltas
-        ? 'Você passou do limite: ${a.faltas} faltas de $limiteFaltas permitidas.'
+    final faltasTxt = a.faltas > a.limiteFaltas
+        ? 'Você passou do limite: ${a.faltas} faltas de ${a.limiteFaltas} permitidas.'
         : a.faltas == 0
         ? 'Nenhuma falta até agora. Dá para faltar até ${dias(a.faltasRestantes)} antes de reprovar.'
         : 'Você faltou ${dias(a.faltas)} (${a.faltas} aulas). Ainda pode faltar ${dias(a.faltasRestantes)} antes de reprovar.';

@@ -46,7 +46,7 @@ export function historicoDemo(agora = new Date()): Historico {
         d("Computação em Nuvem", "NUV", [6.0, 5.5, null], 8),
         d("Compiladores", "CMP", [3.5, null, null], 17),
         d("Empreendedorismo", "EMP", [2.0, 4.5, null], 4),
-        d("Trabalho de Conclusão I", "TCC1", [null, null, null]),
+        d("Projeto de Aprendizagem Colaborativa Extensionista", "PAC", [null, null, null]),
       ]),
       s("202611", [
         d("Desenvolvimento Mobile", "MOB", [9.0, 9.4, 9.8]),

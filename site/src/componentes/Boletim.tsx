@@ -68,7 +68,7 @@ function resolverSim(m: Analise, salvo?: EstadoSim): EstadoSim {
 function materiaEncerradaOficial(m: Analise): boolean {
   const oficial = m.disciplina.situacao.toLowerCase();
   return (
-    m.disciplina.faltas > regras.limiteFaltas ||
+    m.disciplina.faltas > m.limiteFaltas ||
     oficial.startsWith("aprov") ||
     oficial.startsWith("reprov")
   );
@@ -595,7 +595,7 @@ function Linha({
         data-rotulo="Faltas"
         className={cn(CELULA_TABELA, CELULA_ROTULO, "md:text-left max-md:col-span-2")}
       >
-        <Faltas faltas={d.faltas} />
+        <Faltas faltas={d.faltas} limite={m.limiteFaltas} alerta={m.alertaFaltas} />
       </TableCell>
       <TableCell className={cn(CELULA_TABELA, "md:pr-5 md:text-left max-md:col-span-full")}>
         <div className="inline-flex flex-col items-start gap-0.5 max-md:flex-row max-md:items-center max-md:gap-2.5">
@@ -609,18 +609,26 @@ function Linha({
   );
 }
 
-/** Cinco grupos de 4 tracinhos, um por dia de aula que pode ser perdido. */
-export function Faltas({ faltas }: { faltas: number }) {
-  const diasTotais = regras.limiteFaltas / regras.aulasPorDia;
-  const sobra = Math.max(0, regras.limiteFaltas - faltas);
-  const alerta = faltas >= regras.alertaFaltas;
+/** Blocos de 4 tracinhos, um por dia de aula que pode ser perdido. */
+export function Faltas({
+  faltas,
+  limite = regras.limiteFaltas,
+  alerta: limiteAlerta = regras.alertaFaltas,
+}: {
+  faltas: number;
+  limite?: number;
+  alerta?: number;
+}) {
+  const diasTotais = limite / regras.aulasPorDia;
+  const sobra = Math.max(0, limite - faltas);
+  const alerta = faltas >= limiteAlerta;
   return (
     <span
       className={cn(
         "inline-flex items-center gap-2 text-[13px]",
         alerta ? "font-semibold text-critico" : "text-muted-foreground",
       )}
-      title={`${faltas} de ${regras.limiteFaltas} faltas. Pode faltar mais ${dias(sobra)}.`}
+      title={`${faltas} de ${limite} faltas. Pode faltar mais ${dias(sobra)}.`}
     >
       <span className="inline-flex items-center gap-[5px]" aria-hidden="true">
         {Array.from({ length: diasTotais }, (_, d) => {
@@ -659,7 +667,7 @@ export function Faltas({ faltas }: { faltas: number }) {
         })}
       </span>
       <span className="tabular-nums">
-        {faltas}/{regras.limiteFaltas}
+        {faltas}/{limite}
       </span>
     </span>
   );
@@ -679,7 +687,7 @@ function Detalhe({
   const d = m.disciplina;
   const pendentes = d.notas.flatMap((n, i) => (n === null ? [i] : []));
   const inicial = passoMeio(m.precisa ?? regras.notaMinima);
-  const sobra = Math.max(0, regras.limiteFaltas - d.faltas);
+  const sobra = Math.max(0, m.limiteFaltas - d.faltas);
   const encerradaOficial = materiaEncerradaOficial(m);
   const podeSimularN4 = !encerradaOficial && !passou(m.situacao) && d.nota4 == null;
   const fim = (m.restantes === 0 && !podeSimularN4) || encerradaOficial;
@@ -852,14 +860,14 @@ function Detalhe({
         <div>
           <h3 className="mb-2 text-[13px] font-semibold">Faltas</h3>
           <p className="text-[15px] leading-relaxed">
-            {d.faltas > regras.limiteFaltas
-              ? `Você passou do limite: ${d.faltas} faltas de ${regras.limiteFaltas} permitidas.`
+            {d.faltas > m.limiteFaltas
+              ? `Você passou do limite: ${d.faltas} faltas de ${m.limiteFaltas} permitidas.`
               : d.faltas === 0
                 ? `Nenhuma falta até agora. Dá para faltar até ${dias(sobra)} antes de reprovar.`
                 : `Você faltou ${dias(d.faltas)} (${d.faltas} aulas). Ainda pode faltar ${dias(sobra)} antes de reprovar.`}
           </p>
           <div className="mt-2.5">
-            <Faltas faltas={d.faltas} />
+            <Faltas faltas={d.faltas} limite={m.limiteFaltas} alerta={m.alertaFaltas} />
           </div>
           <p className="mt-2.5 text-[13px] text-texto-3">
             Disciplina {d.codDisc}, turma {d.codTurma}

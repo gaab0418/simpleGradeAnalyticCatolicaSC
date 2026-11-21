@@ -125,3 +125,63 @@ jobs:
 
           URL=$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json url -q .url)
           echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+  staging:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      deployments: write
+    environment:
+      name: Staging
+      url: ${{ steps.publicar.outputs.url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: grade-analytic-apk
+          path: artifacts
+      - name: Publicar pre-release Mobile e registrar deployment de Staging
+        id: publicar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSAO_SEMVER: ${{ needs.build.outputs.versao_semver }}
+          VERSAO_RAW: ${{ needs.build.outputs.versao_raw }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="mobile-v${VERSAO_SEMVER}-rc.${GITHUB_RUN_NUMBER}"
+
+          APK_ORIGEM=$(find artifacts -name '*.apk' -type f | head -n1)
+          if [ -z "$APK_ORIGEM" ]; then
+            echo "APK não encontrado no artefato." >&2
+            exit 1
+          fi
+
+          APK_VERSIONADO="artifacts/grade-analytic-${TAG}.apk"
+          SHA_FILE="${APK_VERSIONADO}.sha256"
+          cp "$APK_ORIGEM" "$APK_VERSIONADO"
+          (cd artifacts && sha256sum "$(basename "$APK_VERSIONADO")" > "$(basename "$SHA_FILE")")
+
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              "$APK_ORIGEM" \
+              "$APK_VERSIONADO" \
+              "$SHA_FILE" \
+              -R "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$TAG" \
+              "$APK_ORIGEM" \
+              "$APK_VERSIONADO" \
+              "$SHA_FILE" \
+              -R "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --title "Grade Analytic Mobile ${TAG} (${VERSAO_RAW} - Staging)" \
+              --notes "Build de staging do aplicativo Android (${VERSAO_RAW}). Inclui APK e checksum SHA-256." \
+              --generate-notes
+          fi
+
+          URL=$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json url -q .url)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"

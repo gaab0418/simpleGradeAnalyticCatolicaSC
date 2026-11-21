@@ -69,6 +69,49 @@ void main() {
       );
     });
 
+    test('PAC: limite de 8 faltas (2 dias) e alerta a partir de 4', () {
+      Disciplina pac(
+        List<double?> notas, {
+        int faltas = 0,
+        String nome =
+            'PROJETO DE APRENDIZAGEM COLABORATIVA EXTENSIONISTA IV - PAC ESOFT',
+        String codDisc = 'G1660',
+      }) => Disciplina(
+        chave: codDisc,
+        codTurma: 'T1',
+        codDisc: codDisc,
+        nomeBruto: nome,
+        situacao: 'Matriculado',
+        notas: notas,
+        faltas: faltas,
+      );
+
+      final normal = analisar(pac([9.8, null, null], faltas: 0));
+      expect(normal.limiteFaltas, 8);
+      expect(normal.alertaFaltas, 4);
+      expect(normal.situacao, Situacao.tranquila);
+
+      final alerta = analisar(pac([9.8, null, null], faltas: 4));
+      expect(alerta.situacao, Situacao.limiteDeFaltas);
+
+      final dentroSemAlerta = analisar(pac([10, 10, 10], faltas: 3));
+      expect(dentroSemAlerta.situacao, Situacao.garantida);
+
+      final noLimite = analisar(pac([10, 10, 10], faltas: 8));
+      expect(noLimite.situacao, Situacao.limiteDeFaltas);
+      expect(analisar(pac([3.0, 6.0, 6.0], faltas: 8)).precisaN4, 6);
+
+      final reprovada = analisar(pac([10, 10, 10], faltas: 9));
+      expect(reprovada.situacao, Situacao.reprovadaPorFalta);
+      expect(analisar(pac([3.0, 6.0, 6.0], faltas: 9)).precisaN4, isNull);
+
+      final porSigla = analisar(
+        pac([9.8, null, null], faltas: 12, nome: 'EXTENSAO - PAC', codDisc: 'PAC'),
+      );
+      expect(porSigla.limiteFaltas, 8);
+      expect(porSigla.situacao, Situacao.reprovadaPorFalta);
+    });
+
     test('ordena do mais urgente para o mais tranquilo', () {
       final s = Semestre(
         codigo: '202623',

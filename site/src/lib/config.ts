@@ -15,7 +15,11 @@ export const regras = {
   notaMinima: 6,
   /** Acima disso reprova por falta (5 dias de 4 aulas). */
   limiteFaltas: 20,
+  /** Limite de faltas no PAC (2 dias de 4 aulas). */
+  limiteFaltasPac: 8,
   aulasPorDia: 4,
   /** A partir daqui resta só um dia de falta. */
   alertaFaltas: 16,
+  /** A partir daqui resta só um dia de falta no PAC. */
+  alertaFaltasPac: 4,
 } as const;

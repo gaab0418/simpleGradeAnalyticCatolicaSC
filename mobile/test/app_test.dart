@@ -268,6 +268,19 @@ void main() {
     expect(find.text('Faltas no semestre'), findsOneWidget);
     expect(find.byIcon(Icons.history_rounded), findsOneWidget);
 
+    // Rola até o PAC para verificar o limite reduzido (0/8).
+    await t.dragUntilVisible(
+      find.text('Projeto de Aprendizagem Colaborativa Extensionista'),
+      find.byType(BoletimPage),
+      const Offset(0, -150),
+    );
+    expect(find.text('0/8'), findsOneWidget);
+    await t.dragUntilVisible(
+      find.text('1 de 6 matérias garantidas'),
+      find.byType(BoletimPage),
+      const Offset(0, 150),
+    );
+
     // Abre o simulador da materia mais urgente e exercita presets e N4.
     await t.dragUntilVisible(
       find.text('Empreendedorismo'),

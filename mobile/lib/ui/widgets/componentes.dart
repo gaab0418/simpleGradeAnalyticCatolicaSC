@@ -57,24 +57,30 @@ class Selo extends StatelessWidget {
   }
 }
 
-/// Faltas em cinco grupos de 4 tracinhos (tally marks 5×4), com corte
-/// diagonal vermelho nos dias completos de 4 aulas, seguido de `faltas/20`.
+/// Faltas em grupos de 4 tracinhos (tally marks), com corte
+/// diagonal vermelho nos dias completos de 4 aulas, seguido de `faltas/limite`.
 class BarraDeFaltas extends StatelessWidget {
-  const BarraDeFaltas(this.faltas, {super.key});
+  const BarraDeFaltas(
+    this.faltas, {
+    super.key,
+    this.limite = limiteFaltas,
+    this.alerta = alertaFaltas,
+  });
   final int faltas;
+  final int limite;
+  final int alerta;
 
   @override
   Widget build(BuildContext context) {
     final c = Paleta.of(context);
-    final alerta = faltas >= alertaFaltas;
-    final corTexto = alerta ? c.critico : c.texto2;
-    final corTracoAtivo = alerta ? c.critico : c.texto;
+    final emAlerta = faltas >= alerta;
+    final corTexto = emAlerta ? c.critico : c.texto2;
+    final corTracoAtivo = emAlerta ? c.critico : c.texto;
     final corTracoInativo = c.bordaForte.withValues(alpha: 0.45);
-    final sobra = faltas >= limiteFaltas ? 0 : limiteFaltas - faltas;
+    final sobra = faltas >= limite ? 0 : limite - faltas;
 
     return Semantics(
-      label:
-          '$faltas de $limiteFaltas faltas. Pode faltar mais ${dias(sobra)}.',
+      label: '$faltas de $limite faltas. Pode faltar mais ${dias(sobra)}.',
       excludeSemantics: true,
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -83,9 +89,10 @@ class BarraDeFaltas extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             CustomPaint(
-              size: const Size(_TallyFaltasPainter.larguraTotal, 14),
+              size: Size(_TallyFaltasPainter.larguraPara(limite), 14),
               painter: _TallyFaltasPainter(
                 faltas: faltas,
+                limite: limite,
                 corAtivo: corTracoAtivo,
                 corInativo: corTracoInativo,
                 corCorte: c.critico,
@@ -93,11 +100,11 @@ class BarraDeFaltas extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '$faltas/$limiteFaltas',
+              '$faltas/$limite',
               style: TextStyle(
                 fontSize: 13,
                 color: corTexto,
-                fontWeight: alerta ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: emAlerta ? FontWeight.w600 : FontWeight.w400,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -111,17 +118,18 @@ class BarraDeFaltas extends StatelessWidget {
 class _TallyFaltasPainter extends CustomPainter {
   const _TallyFaltasPainter({
     required this.faltas,
+    required this.limite,
     required this.corAtivo,
     required this.corInativo,
     required this.corCorte,
   });
 
   final int faltas;
+  final int limite;
   final Color corAtivo;
   final Color corInativo;
   final Color corCorte;
 
-  static const int _diasTotais = limiteFaltas ~/ aulasPorDia; // 5
   static const double _tracoW = 2.5;
   static const double _tracoH = 14;
   static const double _tracoGap = 2.0;
@@ -129,8 +137,13 @@ class _TallyFaltasPainter extends CustomPainter {
   static const double _diaW =
       _diaPad * 2 + aulasPorDia * _tracoW + (aulasPorDia - 1) * _tracoGap;
   static const double _diaGap = 4.5;
-  static const double larguraTotal =
-      _diasTotais * _diaW + (_diasTotais - 1) * _diaGap;
+
+  int get _diasTotais => limite ~/ aulasPorDia;
+
+  static double larguraPara(int limite) {
+    final diasTotais = limite ~/ aulasPorDia;
+    return diasTotais * _diaW + (diasTotais - 1) * _diaGap;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -165,6 +178,7 @@ class _TallyFaltasPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TallyFaltasPainter oldDelegate) =>
       oldDelegate.faltas != faltas ||
+      oldDelegate.limite != limite ||
       oldDelegate.corAtivo != corAtivo ||
       oldDelegate.corInativo != corInativo ||
       oldDelegate.corCorte != corCorte;

@@ -8,8 +8,20 @@ const double somaAprovacao = 18; // media 6 em 3 notas
 const double notaMaxima = 10;
 const double notaMinimaAprovacao = 6;
 const int limiteFaltas = 20; // acima disso reprova (5 dias de 4 aulas)
+const int limiteFaltasPac = 8; // acima disso reprova no PAC (2 dias de 4 aulas)
 const int aulasPorDia = 4;
 const int alertaFaltas = 16; // falta 1 dia para o limite
+const int alertaFaltasPac = 4; // falta 1 dia para o limite no PAC
+
+final _regexPac = RegExp(
+  r'\bPAC\b|PROJETO DE APRENDIZAGEM COLABORATIVA',
+  caseSensitive: false,
+);
+final _regexCodPac = RegExp(r'^PAC\b', caseSensitive: false);
+
+/// Identifica disciplinas de PAC, que possuem metade da carga horária e limite de 2 dias de falta.
+bool ehPac(Disciplina d) =>
+    _regexPac.hasMatch(d.nomeBruto) || _regexCodPac.hasMatch(d.codDisc);
 
 /// Cor do marca-texto.
 enum Tom { ok, calmo, atencao, apertado, critico, neutro }
@@ -100,6 +112,8 @@ class Analise {
     required this.precisa,
     required this.precisaN4,
     required this.situacao,
+    required this.limiteFaltas,
+    required this.alertaFaltas,
   });
 
   final Disciplina disciplina;
@@ -118,6 +132,12 @@ class Analise {
   final double? precisaN4;
   final Situacao situacao;
 
+  /// Limite maximo de faltas (em aulas) para esta disciplina.
+  final int limiteFaltas;
+
+  /// Quantidade de faltas (em aulas) a partir da qual dispara alerta.
+  final int alertaFaltas;
+
   int get faltas => disciplina.faltas;
   int get faltasRestantes => faltas >= limiteFaltas ? 0 : limiteFaltas - faltas;
 
@@ -132,6 +152,9 @@ class Analise {
 }
 
 Analise analisar(Disciplina d) {
+  final pac = ehPac(d);
+  final limFaltas = pac ? limiteFaltasPac : limiteFaltas;
+  final alFaltas = pac ? alertaFaltasPac : alertaFaltas;
   final n4Res = aplicarNota4(d.notas, d.nota4);
   final notasEfetivas = n4Res.notasEfetivas;
   final lancadas = notasEfetivas.whereType<double>().toList();
@@ -149,7 +172,7 @@ Analise analisar(Disciplina d) {
   if (d.nota4 == null &&
       restantes == 0 &&
       soma < somaAprovacao &&
-      d.faltas <= limiteFaltas &&
+      d.faltas <= limFaltas &&
       !oficial.startsWith('aprov') &&
       !oficial.startsWith('reprov')) {
     final menor = lancadas.reduce((a, b) => a < b ? a : b);
@@ -158,7 +181,7 @@ Analise analisar(Disciplina d) {
   }
 
   Situacao s;
-  if (d.faltas > limiteFaltas) {
+  if (d.faltas > limFaltas) {
     s = Situacao.reprovadaPorFalta;
   } else if (oficial.startsWith('aprov')) {
     s = Situacao.aprovada;
@@ -175,7 +198,7 @@ Analise analisar(Disciplina d) {
   }
 
   // Faltas perto do limite pesam mais que nota tranquila.
-  if (d.faltas >= alertaFaltas &&
+  if (d.faltas >= alFaltas &&
       s.urgencia < Situacao.limiteDeFaltas.urgencia) {
     s = Situacao.limiteDeFaltas;
   }
@@ -192,6 +215,8 @@ Analise analisar(Disciplina d) {
     precisa: precisa,
     precisaN4: precisaN4,
     situacao: s,
+    limiteFaltas: limFaltas,
+    alertaFaltas: alFaltas,
   );
 }
 

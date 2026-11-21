@@ -56,6 +56,24 @@ export const passou = (s: Situacao) => s.id === "garantida" || s.id === "aprovad
 export const encerrada = (s: Situacao) =>
   s.id === "aprovada" || s.id === "reprovada" || s.id === "reprovadaPorFalta";
 
+const REGEX_PAC = /\bPAC\b|PROJETO DE APRENDIZAGEM COLABORATIVA/i;
+const REGEX_COD_PAC = /^PAC\b/i;
+
+/** Identifica disciplinas de PAC, que possuem metade da carga horária e limite de 2 dias de falta. */
+export function ehPac(d: Pick<Disciplina, "nome" | "codDisc">): boolean {
+  return REGEX_PAC.test(d.nome) || REGEX_COD_PAC.test(d.codDisc);
+}
+
+/** Limites de falta aplicáveis à disciplina (2 dias no PAC; 5 dias nas demais). */
+export function limitesFaltas(d: Pick<Disciplina, "nome" | "codDisc">): {
+  limite: number;
+  alerta: number;
+} {
+  return ehPac(d)
+    ? { limite: regras.limiteFaltasPac, alerta: regras.alertaFaltasPac }
+    : { limite: regras.limiteFaltas, alerta: regras.alertaFaltas };
+}
+
 function porNecessidade(media: number): SituacaoId {
   if (media > regras.notaMaxima) return "foraDeAlcance";
   if (media > 8.5) return "critica";
@@ -117,9 +135,14 @@ export interface Analise {
   media: number | null;
   /** A média acima já é definitiva. */
   mediaDefinitiva: boolean;
+  /** Limite máximo de faltas (em aulas) para esta disciplina. */
+  limiteFaltas: number;
+  /** Quantidade de faltas (em aulas) a partir da qual dispara alerta. */
+  alertaFaltas: number;
 }
 
 export function analisar(d: Disciplina): Analise {
+  const { limite: limiteFaltas, alerta: alertaFaltas } = limitesFaltas(d);
   const nota4 = d.nota4 ?? null;
   const { efetivas, indiceSubstituido, notaSubstituida } = aplicarNota4(d.notas, nota4);
   const lancadas = efetivas.filter((n): n is number => n !== null);
@@ -132,7 +155,7 @@ export function analisar(d: Disciplina): Analise {
   const oficial = d.situacao.toLowerCase();
 
   let id: SituacaoId;
-  if (d.faltas > regras.limiteFaltas) id = "reprovadaPorFalta";
+  if (d.faltas > limiteFaltas) id = "reprovadaPorFalta";
   else if (oficial.startsWith("aprov")) id = "aprovada";
   else if (oficial.startsWith("reprov")) id = "reprovada";
   else if (lancadas.length === 0) id = "semNotas";
@@ -142,7 +165,7 @@ export function analisar(d: Disciplina): Analise {
 
   // Faltas perto do limite pesam mais que nota tranquila.
   if (
-    d.faltas >= regras.alertaFaltas &&
+    d.faltas >= alertaFaltas &&
     SITUACOES[id].urgencia < SITUACOES.limiteDeFaltas.urgencia
   ) {
     id = "limiteDeFaltas";
@@ -153,7 +176,7 @@ export function analisar(d: Disciplina): Analise {
     nota4 === null &&
     lancadas.length > 0 &&
     soma < regras.somaAprovacao &&
-    d.faltas <= regras.limiteFaltas &&
+    d.faltas <= limiteFaltas &&
     !passou(SITUACOES[id])
   ) {
     const menorNota = Math.min(...efetivas.map((n) => n ?? 0));
@@ -178,6 +201,8 @@ export function analisar(d: Disciplina): Analise {
     situacao: SITUACOES[id],
     media: d.mediaFinal ?? (lancadas.length ? soma / lancadas.length : null),
     mediaDefinitiva: d.mediaFinal !== null || restantes === 0,
+    limiteFaltas,
+    alertaFaltas,
   };
 }
 
