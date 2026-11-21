@@ -15,6 +15,8 @@ import {
   analisar,
   analisarSemestre,
   aplicarNota4,
+  moverChave,
+  ordenarAnalises,
   periodoPadrao,
   semestreConsolidado,
   semestreEncerrado,
@@ -252,5 +254,49 @@ describe("com o histórico de demonstração", () => {
     expect(semestreConsolidado(encerradoAtual, agora)).toBe(true);
     expect(semestreConsolidado(vazioAnoAnterior, agora)).toBe(false);
     expect(semestreConsolidado(atipicoAberto, agora)).toBe(false);
+  });
+
+  it("ordenarAnalises e moverChave suportam modos e ordem personalizada", () => {
+    const lista = [
+      analisar(disc([9, 9, null], { chave: "a", nome: "ZOO - ZOO", faltas: 4 })),
+      analisar(disc([5, 5, null], { chave: "b", nome: "ALFA - ALF", faltas: 2 })),
+      analisar(
+        disc([8, 8, null], {
+          chave: "c",
+          codDisc: "PAC",
+          nome: "PROJETO DE APRENDIZAGEM COLABORATIVA - PAC",
+          faltas: 4,
+        }),
+      ),
+    ];
+
+    expect(ordenarAnalises(lista, "urgencia").map((a) => a.disciplina.chave)).toEqual([
+      "c",
+      "b",
+      "a",
+    ]);
+    expect(ordenarAnalises(lista, "nome").map((a) => a.disciplina.chave)).toEqual([
+      "b",
+      "c",
+      "a",
+    ]);
+    // PAC tem 4/8 = 50% de faltas, antes de a (4/20 = 20%) e b (2/20 = 10%).
+    expect(ordenarAnalises(lista, "faltas").map((a) => a.disciplina.chave)).toEqual([
+      "c",
+      "a",
+      "b",
+    ]);
+    expect(ordenarAnalises(lista, "soma").map((a) => a.disciplina.chave)).toEqual([
+      "a",
+      "c",
+      "b",
+    ]);
+
+    const movida = moverChave(["c", "b", "a"], "a", "cima");
+    expect(movida).toEqual(["c", "a", "b"]);
+    expect(ordenarAnalises(lista, "personalizada", movida).map((a) => a.disciplina.chave)).toEqual(
+      ["c", "a", "b"],
+    );
+    expect(moverChave(["c", "b", "a"], "c", "a")).toEqual(["b", "a", "c"]);
   });
 });

@@ -10,6 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/models.dart';
+import '../domain/regras.dart';
 import 'portal.dart';
 
 abstract interface class CofreCredenciais {
@@ -64,11 +65,54 @@ class Preferencias {
   );
 }
 
+class LayoutSemestre {
+  const LayoutSemestre({
+    this.modo = ModoOrdem.urgencia,
+    this.ordem = const [],
+    this.ocultas = const [],
+  });
+
+  final ModoOrdem modo;
+  final List<String> ordem;
+  final List<String> ocultas;
+
+  LayoutSemestre copyWith({
+    ModoOrdem? modo,
+    List<String>? ordem,
+    List<String>? ocultas,
+  }) => LayoutSemestre(
+    modo: modo ?? this.modo,
+    ordem: ordem ?? this.ordem,
+    ocultas: ocultas ?? this.ocultas,
+  );
+
+  factory LayoutSemestre.fromJson(Map<String, dynamic> j) => LayoutSemestre(
+    modo:
+        ModoOrdem.values.asNameMap()[j['modo'] as String?] ??
+        ModoOrdem.urgencia,
+    ordem: [
+      for (final v in (j['ordem'] as List? ?? const []))
+        if (v is String) v,
+    ],
+    ocultas: [
+      for (final v in (j['ocultas'] as List? ?? const []))
+        if (v is String) v,
+    ],
+  );
+
+  Map<String, dynamic> toJson() => {
+    'modo': modo.name,
+    'ordem': ordem,
+    'ocultas': ocultas,
+  };
+}
+
 class ArmazenamentoLocal {
   static const _kHistorico = 'historico.v1';
   static const _kPassado = 'historico.passado.v2';
   static const _kTema = 'pref.tema';
   static const _kBiometria = 'pref.biometria';
+  static const _kLayouts = 'pref.layout_semestres.v1';
 
   final _prefs = SharedPreferencesAsync();
 
@@ -143,4 +187,33 @@ class ArmazenamentoLocal {
     await _prefs.setString(_kTema, p.tema.name);
     await _prefs.setBool(_kBiometria, p.biometria);
   }
+
+  Future<Map<String, LayoutSemestre>> lerLayoutsSemestres() async {
+    final bruto = await _prefs.getString(_kLayouts);
+    if (bruto == null) return const {};
+    try {
+      final dec = jsonDecode(bruto);
+      if (dec is! Map) return const {};
+      return {
+        for (final entry in dec.entries)
+          if (entry.key is String && entry.value is Map)
+            entry.key as String: LayoutSemestre.fromJson(
+              Map<String, dynamic>.from(entry.value as Map),
+            ),
+      };
+    } catch (_) {
+      await _prefs.remove(_kLayouts);
+      return const {};
+    }
+  }
+
+  Future<void> salvarLayoutsSemestres(Map<String, LayoutSemestre> layouts) =>
+      _prefs.setString(
+        _kLayouts,
+        jsonEncode({
+          for (final entry in layouts.entries) entry.key: entry.value.toJson(),
+        }),
+      );
+
+  Future<void> apagarLayoutsSemestres() => _prefs.remove(_kLayouts);
 }

@@ -1,5 +1,9 @@
 import {
+  LuArrowDown,
+  LuArrowUp,
   LuChevronDown,
+  LuEye,
+  LuEyeOff,
   LuGraduationCap,
   LuHistory,
   LuLogOut,
@@ -17,6 +21,10 @@ export const Logo = () => <LuGraduationCap aria-hidden="true" />;
 export const IconeAtualizar = () => <LuRefreshCw aria-hidden="true" />;
 export const IconeHistorico = () => <LuHistory aria-hidden="true" />;
 export const IconeSeta = () => <LuChevronDown aria-hidden="true" />;
+export const IconeOlho = () => <LuEye aria-hidden="true" />;
+export const IconeOlhoFechado = () => <LuEyeOff aria-hidden="true" />;
+export const IconeSubir = () => <LuArrowUp aria-hidden="true" />;
+export const IconeDescer = () => <LuArrowDown aria-hidden="true" />;
 export const IconeSistema = () => <LuMonitor aria-hidden="true" />;
 export const IconeSol = () => <LuSun aria-hidden="true" />;
 export const IconeLua = () => <LuMoon aria-hidden="true" />;

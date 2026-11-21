@@ -220,13 +220,83 @@ Analise analisar(Disciplina d) {
   );
 }
 
-/// Analisa e ordena: o mais urgente primeiro.
-List<Analise> analisarSemestre(Semestre s) {
-  return s.disciplinas.map(analisar).toList()..sort((a, b) {
-    final r = b.situacao.urgencia.compareTo(a.situacao.urgencia);
-    return r != 0 ? r : (b.precisa ?? 0).compareTo(a.precisa ?? 0);
-  });
+enum ModoOrdem { urgencia, nome, faltas, soma, personalizada }
+
+/// Ordena analises conforme o modo escolhido ou a lista personalizada de chaves.
+List<Analise> ordenarAnalises(
+  List<Analise> analises,
+  ModoOrdem modo, [
+  List<String> ordemPersonalizada = const [],
+]) {
+  final copia = List<Analise>.of(analises);
+  switch (modo) {
+    case ModoOrdem.personalizada when ordemPersonalizada.isNotEmpty:
+      final pos = <String, int>{
+        for (var i = 0; i < ordemPersonalizada.length; i++)
+          ordemPersonalizada[i]: i,
+      };
+      copia.sort((a, b) {
+        final ia = pos[a.disciplina.chave] ?? 1 << 30;
+        final ib = pos[b.disciplina.chave] ?? 1 << 30;
+        final cmp = ia.compareTo(ib);
+        return cmp != 0
+            ? cmp
+            : b.situacao.urgencia.compareTo(a.situacao.urgencia);
+      });
+    case ModoOrdem.nome:
+      copia.sort(
+        (a, b) => a.disciplina.nomeBruto.toLowerCase().compareTo(
+          b.disciplina.nomeBruto.toLowerCase(),
+        ),
+      );
+    case ModoOrdem.faltas:
+      copia.sort((a, b) {
+        final prop = (b.faltas / b.limiteFaltas).compareTo(
+          a.faltas / a.limiteFaltas,
+        );
+        if (prop != 0) return prop;
+        final abs = b.faltas.compareTo(a.faltas);
+        return abs != 0
+            ? abs
+            : b.situacao.urgencia.compareTo(a.situacao.urgencia);
+      });
+    case ModoOrdem.soma:
+      copia.sort((a, b) {
+        final s = b.soma.compareTo(a.soma);
+        return s != 0 ? s : b.situacao.urgencia.compareTo(a.situacao.urgencia);
+      });
+    case ModoOrdem.urgencia:
+    case ModoOrdem.personalizada:
+      copia.sort((a, b) {
+        final r = b.situacao.urgencia.compareTo(a.situacao.urgencia);
+        return r != 0 ? r : (b.precisa ?? 0).compareTo(a.precisa ?? 0);
+      });
+  }
+  return copia;
 }
+
+/// Move uma chave na lista por deslocamento (-1/+1) ou para a posicao de [alvo].
+List<String> moverChave(
+  List<String> chaves,
+  String chave, {
+  int? deslocamento,
+  String? alvo,
+}) {
+  final lista = List<String>.of(chaves);
+  final idx = lista.indexOf(chave);
+  if (idx == -1) return lista;
+  final novoIdx = alvo != null
+      ? lista.indexOf(alvo)
+      : idx + (deslocamento ?? 0);
+  if (novoIdx < 0 || novoIdx >= lista.length || novoIdx == idx) return lista;
+  final item = lista.removeAt(idx);
+  lista.insert(novoIdx, item);
+  return lista;
+}
+
+/// Analisa e ordena: o mais urgente primeiro.
+List<Analise> analisarSemestre(Semestre s) =>
+    ordenarAnalises(s.disciplinas.map(analisar).toList(), ModoOrdem.urgencia);
 
 /// Semestre fechado: nada mais muda no portal, nao precisa buscar de novo.
 bool semestreEncerrado(Semestre s) =>

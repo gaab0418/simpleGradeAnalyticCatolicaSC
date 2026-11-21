@@ -54,6 +54,7 @@ class AppController extends ChangeNotifier {
   Historico? historico;
   String? periodo;
   Preferencias prefs = const Preferencias();
+  Map<String, LayoutSemestre> layoutsSemestres = const {};
   bool biometriaDisponivel = false;
   bool demo = false;
 
@@ -65,6 +66,9 @@ class AppController extends ChangeNotifier {
   List<String> novidades = const [];
 
   Semestre? get semestreAtual => historico?.semestre(periodo);
+  LayoutSemestre layoutDoSemestre(String? codigo) =>
+      (codigo == null ? null : layoutsSemestres[codigo]) ??
+      const LayoutSemestre();
 
   DateTime? get sincronizadoEm {
     final datas = historico?.semestres.map((s) => s.atualizadoEm) ?? const [];
@@ -73,6 +77,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> iniciar() async {
     prefs = await _local.lerPreferencias();
+    layoutsSemestres = await _local.lerLayoutsSemestres();
     biometriaDisponivel = await _biometria.disponivel();
     _credenciais = await _lerCofre();
     if (_credenciais == null) {
@@ -156,6 +161,7 @@ class AppController extends ChangeNotifier {
       demo = true;
       historico = historicoDemo(_agora());
       periodo = _periodoInicial();
+      layoutsSemestres = const {};
       erro = null;
       novidades = const [];
       fase = Fase.pronto;
@@ -313,6 +319,77 @@ class AppController extends ChangeNotifier {
 
   void dispensarNovidades() => _mudar(() => novidades = const []);
 
+  Future<void> _atualizarLayout(
+    LayoutSemestre Function(LayoutSemestre atual) fn,
+  ) async {
+    final cod = periodo;
+    if (cod == null) return;
+    final atual = layoutDoSemestre(cod);
+    final novoMapa = Map<String, LayoutSemestre>.of(layoutsSemestres)
+      ..[cod] = fn(atual);
+    _mudar(() => layoutsSemestres = Map.unmodifiable(novoMapa));
+    if (!demo && _persistir) {
+      await _local.salvarLayoutsSemestres(layoutsSemestres);
+    }
+  }
+
+  Future<void> definirModoOrdem(ModoOrdem modo) => _atualizarLayout(
+    (atual) => atual.copyWith(
+      modo: modo,
+      ordem: modo == ModoOrdem.urgencia ? const [] : atual.ordem,
+    ),
+  );
+
+  Future<void> moverMateria(String chave, int deslocamento) async {
+    final s = semestreAtual;
+    if (s == null || deslocamento == 0) return;
+    final atual = layoutDoSemestre(s.codigo);
+    final ordenadas = ordenarAnalises(
+      s.disciplinas.map(analisar).toList(),
+      atual.modo,
+      atual.ordem,
+    );
+    final ocultasSet = atual.ocultas.toSet();
+    final visiveis = [
+      for (final a in ordenadas)
+        if (!ocultasSet.contains(a.disciplina.chave)) a.disciplina.chave,
+    ];
+    final idx = visiveis.indexOf(chave);
+    final novoIdx = idx + deslocamento;
+    if (idx == -1 || novoIdx < 0 || novoIdx >= visiveis.length) return;
+    final alvo = visiveis[novoIdx];
+    final base = [for (final a in ordenadas) a.disciplina.chave];
+    await _atualizarLayout(
+      (l) => l.copyWith(
+        modo: ModoOrdem.personalizada,
+        ordem: moverChave(base, chave, alvo: alvo),
+      ),
+    );
+  }
+
+  Future<void> alternarOcultaMateria(String chave) => _atualizarLayout((atual) {
+    final ocultas = List<String>.of(atual.ocultas);
+    if (!ocultas.remove(chave)) ocultas.add(chave);
+    return atual.copyWith(ocultas: ocultas);
+  });
+
+  Future<void> ocultarGarantidas() async {
+    final s = semestreAtual;
+    if (s == null) return;
+    final atual = layoutDoSemestre(s.codigo);
+    final ocultas = List<String>.of(atual.ocultas);
+    for (final d in s.disciplinas) {
+      final a = analisar(d);
+      if (a.situacao.passou && !ocultas.contains(d.chave)) {
+        ocultas.add(d.chave);
+      }
+    }
+    await _atualizarLayout((l) => l.copyWith(ocultas: ocultas));
+  }
+
+  Future<void> mostrarTodasMaterias() =>
+      _atualizarLayout((l) => l.copyWith(ocultas: const []));
+
   Future<void> definirTema(TemaApp tema) async {
     _mudar(() => prefs = prefs.copyWith(tema: tema));
     await _local.salvarPreferencias(prefs);
@@ -360,6 +437,7 @@ class AppController extends ChangeNotifier {
     if (!demo) {
       await _cofre.apagar();
       await _local.apagarHistorico();
+      await _local.apagarLayoutsSemestres();
       prefs = prefs.copyWith(biometria: false);
       await _local.salvarPreferencias(prefs);
     }
@@ -367,6 +445,7 @@ class AppController extends ChangeNotifier {
       demo = false;
       historico = null;
       periodo = null;
+      layoutsSemestres = const {};
       erro = null;
       novidades = const [];
       fase = Fase.deslogado;
